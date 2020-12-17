@@ -8,7 +8,7 @@ output:
 
 ```{r}
 library(pacman)
-p_load(dplyr, tidyverse, DBI, bigrquery, feather, pander, bigrquery, glue)
+p_load(dplyr, tidyverse, DBI, bigrquery, feather, pander, bigrquery, glue, here)
 ```
 
 
@@ -28,21 +28,40 @@ write_keyword_files <- function(min, max, n, n_files){
           WHERE location = 2840 
           AND keyword_info_search_volume >= {min}
           AND keyword_info_search_volume < {max}
+          AND spell = ''
+          AND spell_type = ''
+          AND keyword_info_categories NOT LIKE '[]'
           ORDER BY RAND()
           LIMIT {n}")
   tb <- bq_project_query("dataforseo-bigquery", sql)
   df <- bq_table_download(tb, max_results = as.numeric(n)) %>% 
     mutate(g = (row_number() -1) %/% (n() / n_files))
   
-  for (i in 0:(n_files-1)){
-    write_csv(df %>% filter(g == i) %>% select(keyword), 
-              glue("keywords_{min}_to_{max}/{i}.csv"), col_names = F)
-  }  
+  df <- data_frame(df)
+  
+  # for (i in 0:(n_files-1)){
+  # write_csv(df %>% filter(g == i) %>% 
+  # glue("keywords_{min}_to_{max}.csv"), col_names = T)
+  #  }  
 }
 
-write_keyword_files("100", "500", "1000000", 100)
-write_keyword_files("500", "1000", "1000000", 100)
-write_keyword_files("1000", "10000", "1000000", 100)
-write_keyword_files("10000", "1000000000", "1000000", 100)
+df1 <- write_keyword_files("500", "1000", "40000", 1) 
+df1_final <- df1 %>% mutate(monthly_search_volume_level = factor("500-1000"))
+saveRDS(df1_final, file = here("raw_data", "500-1000_keywords.rds"))
+
+df2 <- write_keyword_files("1000", "10000", "40000", 1) 
+df2_final <- df2 %>% mutate(monthly_search_volume_level = factor("1000-10000"))
+saveRDS(df2_final, file = here("raw_data", "1000-10000_keywords.rds"))
+
+df3 <- write_keyword_files("10000", "100000", "40000", 1) 
+df3_final <- df3 %>% mutate(monthly_search_volume_level = factor("10000-100000")) 
+saveRDS(df3_final, file = here("raw_data", "10000-100000_keywords.rds"))
+
+final_df <- bind_rows(df1_final, df2_final, df3_final) %>% mutate(keyword_id = row_number())
+saveRDS(final_df, file = here("raw_data", "keywords_120k.rds"))
+
+write_csv(x = final_df, path = here("raw_data", "keywords_120k"))
+
+
 ```
 
