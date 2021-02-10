@@ -39,4 +39,10 @@ vignettes/*.pdf
 .Renviron
 
 # raw googledrive files
-raw_data/downloads_from_gdrive
+raw_data/download_from_gdrive
+
+# notebook outputs
+*.nb.html
+
+# ds store
+.DS_Store

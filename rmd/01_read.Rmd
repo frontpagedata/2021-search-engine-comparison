@@ -1,5 +1,58 @@
 ---
-title: "Data Cleaning and Preparation"
-output: html_document
+title: "R Notebook"
+output: html_notebook
 ---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+## function to create rds files of the data
+
+create_rds_from_raw_file <- function(search_engine) {
+  
+  list_of_files <- list.files(here::here(str_c("raw_data/download_from_gdrive/", search_engine)))
+  
+  map_dfr(list_of_files,
+          ~read_delim(
+            here::here(str_c("raw_data/download_from_gdrive/Google/", .)),
+            delim = "~",
+            col_names = c("entry_id", "keyword_id", "keyword", "type", "rank_group",
+                          "rank_absolute","page_num", "domain", "title", "url", "breadcrumb",
+                          "meta"),
+            # n_max = 10
+            ) 
+          )
+}
+
+google <- create_rds_from_raw_file("Google")
+
+```
+
+
+```{r}
+output_google_id <- read_delim(
+  "raw_data/download_from_gdrive/Google/google_X-50000.csv",
+  delim = "~",
+  col_names = c("entry_id", "keyword_id", "keyword", "type", "rank_group", "rank_absolute",
+                "page_num", "domain", "title", "url", "breadcrumb", "meta"),
+  # n_max = 100
+  )
+```
+
+```{r}
+google %>% 
+  glimpse()
+```
+
+```{r}
+google %>% 
+  summarise(n_distinct(keyword_id), min(keyword_id), max(keyword_id))
+```
+
+```{r}
+google %>% 
+  filter(!is.na(keyword))
+```
 
