@@ -37,3 +37,6 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# raw googledrive files
+raw_data/downloads_from_gdrive
