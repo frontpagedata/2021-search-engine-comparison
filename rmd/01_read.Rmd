@@ -12,47 +12,162 @@ library(tidyverse)
 
 create_rds_from_raw_file <- function(search_engine) {
   
+  ## the delim for DuckDuck is different to the rest
+  if (search_engine == "DuckDuck") {
+    csv_delim <-  "\t"
+    csv_colnames <- TRUE
+  } else {
+    csv_delim <- "~"
+    csv_colnames <- c("entry_id", "keyword_id", "keyword", "type", "rank_group",
+                          "rank_absolute","page_num", "domain", "title", "url", "breadcrumb",
+                          "meta")
+  }
+  
   list_of_files <- list.files(here::here(str_c("raw_data/download_from_gdrive/", search_engine)))
   
   map_dfr(list_of_files,
           ~read_delim(
-            here::here(str_c("raw_data/download_from_gdrive/Google/", .)),
-            delim = "~",
-            col_names = c("entry_id", "keyword_id", "keyword", "type", "rank_group",
-                          "rank_absolute","page_num", "domain", "title", "url", "breadcrumb",
-                          "meta"),
-            # n_max = 10
+            here::here(str_c("raw_data/download_from_gdrive/", search_engine, "/", .)),
+            delim = csv_delim,
+            col_names = csv_colnames,
+            n_max = 999999
             ) 
-          )
+          ) %>% 
+    mutate(search_engine = search_engine)
 }
 
-google <- create_rds_from_raw_file("Google")
+search_results <- map_dfr(c("Google", "Bing", "Yahoo", "DuckDuck"),
+                          ~create_rds_from_raw_file(.))
+
+search_results %>% 
+  glimpse()
 
 ```
 
 
 ```{r}
-output_google_id <- read_delim(
-  "raw_data/download_from_gdrive/Google/google_X-50000.csv",
-  delim = "~",
-  col_names = c("entry_id", "keyword_id", "keyword", "type", "rank_group", "rank_absolute",
-                "page_num", "domain", "title", "url", "breadcrumb", "meta"),
-  # n_max = 100
-  )
+search_results %>% 
+  count(search_engine)
 ```
 
 ```{r}
-google %>% 
+search_results %>% 
+  group_by(search_engine) %>% 
+  summarise(n_distinct(keyword), min(keyword), max(keyword))
+```
+
+So it seems there's a lot of cleaning to do with this data 
+```{r}
+search_results %>% 
+  filter(search_engine == "Bing") %>% 
+  head(100)
+```
+
+
+# Keywords
+
+```{r}
+keywords <- read_rds(here::here("raw_data/keywords_120k.rds"))
+```
+
+```{r}
+keywords %>% 
   glimpse()
 ```
 
 ```{r}
-google %>% 
-  summarise(n_distinct(keyword_id), min(keyword_id), max(keyword_id))
+keywords %>% 
+  summarise(
+    n = n_distinct(keyword),
+    min(keyword),
+    max(keyword)
+  )
 ```
 
 ```{r}
-google %>% 
-  filter(!is.na(keyword))
+search_results %>% 
+  distinct(keyword, .keep_all = T) %>% 
+  
+  anti_join(
+    keywords %>% 
+      select(-keyword_id),
+    by = "keyword"
+  ) %>% 
+  count()
+```
+
+So need to be careful about the dominoes pizza search result. Honestly, may be esier tojust remove this. keyword 3733
+
+```{r}
+keywords %>% 
+  
+  anti_join(
+    search_results %>% 
+      select(-keyword_id) %>% 
+      filter(search_engine == "Bing"),
+    by = "keyword"
+  ) %>% 
+  head(100)
+  select(keyword_id, keyword, search_engine) %>%
+  head(10)
+  group_by(search_engine) %>% 
+  summarise(n = n_distinct(keyword))
+```
+
+```{r}
+keywords %>% 
+  filter(keyword == "-1.875 as a fraction")
+```
+
+I can simply check which of these are in all the stuff
+
+```{r}
+keywords %>% 
+  select(keyword) %>% 
+  left_join(
+    search_results %>% 
+      filter(search_engine == "Google") %>% 
+      distinct(keyword, .keep_all = T) %>% 
+      mutate(google = TRUE) %>% 
+      select(keyword, google),
+    by = "keyword"
+  ) %>% 
+  
+  left_join(
+    search_results %>% 
+      filter(search_engine == "Yahoo") %>% 
+      distinct(keyword, .keep_all = T) %>% 
+      mutate(yahoo = TRUE) %>% 
+      select(keyword, yahoo),
+    by = "keyword"
+  ) %>% 
+
+left_join(
+    search_results %>% 
+      filter(search_engine == "DuckDuck") %>% 
+      distinct(keyword, .keep_all = T) %>% 
+      mutate(duckduck = TRUE) %>% 
+      select(keyword, duckduck),
+    by = "keyword"
+  ) %>% 
+
+left_join(
+    search_results %>% 
+      filter(search_engine == "Bing") %>% 
+      distinct(keyword, .keep_all = T) %>% 
+      mutate(bing = TRUE) %>% 
+      select(keyword, bing),
+    by = "keyword"
+  ) %>% 
+  group_by(google, bing, yahoo, duckduck) %>% 
+  summarise(n = n_distinct(keyword))
+```
+
+```{r}
+search_results %>% 
+  head(10000) %>% 
+  distinct(keyword, search_engine)
+%>% 
+  spread(keyword, search_engine)
 ```
 
