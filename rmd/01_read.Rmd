@@ -18,9 +18,10 @@ create_rds_from_raw_file <- function(search_engine) {
     csv_colnames <- TRUE
   } else {
     csv_delim <- "~"
-    csv_colnames <- c("entry_id", "keyword_id", "keyword", "type", "rank_group",
-                          "rank_absolute","page_num", "domain", "title", "url", "breadcrumb",
-                          "meta")
+    # csv_colnames <- c("entry_id", "keyword_id", "keyword", "type", "rank_group",
+    #                       "rank_absolute","page_num", "domain", "title", "url", "breadcrumb",
+    #                       "meta")
+    csv_colnames <- str_c("col_", 1:40)
   }
   
   list_of_files <- list.files(here::here(str_c("raw_data/download_from_gdrive/", search_engine)))
@@ -30,6 +31,9 @@ create_rds_from_raw_file <- function(search_engine) {
             here::here(str_c("raw_data/download_from_gdrive/", search_engine, "/", .)),
             delim = csv_delim,
             col_names = csv_colnames,
+            escape_double = F,
+            escape_backslash = F,
+            col_types = cols(.default = col_character()),
             n_max = 999999
             ) 
           ) %>% 
@@ -42,6 +46,26 @@ search_results <- map_dfr(c("Google", "Bing", "Yahoo", "DuckDuck"),
 search_results %>% 
   glimpse()
 
+```
+
+```{r}
+test_import <- read_delim(
+            here::here(str_c("raw_data/download_from_gdrive/", "Google", "/", "0-5000.csv")),
+            delim = "~",
+            escape_double = F,
+            escape_backslash = F,
+            col_names = str_c("col_", 1:40),
+            col_types = cols(.default = col_character())
+)
+
+test_import %>% 
+  problems() %>% 
+  arrange(desc(actual))
+```
+
+```{r}
+test_import %>% 
+  filter(row_number() == 30842)
 ```
 
 
@@ -67,7 +91,8 @@ search_results %>%
 # Keywords
 
 ```{r}
-keywords <- read_rds(here::here("raw_data/keywords_120k.rds"))
+# keywords <- read_rds(here::here("raw_data/keywords_120k.rds"))
+keywords <- read_csv(here::here("raw_data/download_from_gdrive/keywords_60k.csv"))
 ```
 
 ```{r}
@@ -77,6 +102,7 @@ keywords %>%
 
 ```{r}
 keywords %>% 
+  mutate(nchar(keyword)) %>% 
   summarise(
     n = n_distinct(keyword),
     min(keyword),
@@ -159,9 +185,35 @@ left_join(
       select(keyword, bing),
     by = "keyword"
   ) %>% 
-  group_by(google, bing, yahoo, duckduck) %>% 
+  # head(100)
+  group_by(google, bing, yahoo, duckduck) %>%
+  mutate(rn = row_number()) %>%
+  filter(rn <= 5) %>%
+  arrange(desc(google), desc(yahoo), desc(duckduck), desc(bing)) 
+%>% 
+  # write_csv(here::here("raw_data/missing_keywords.csv"))
   summarise(n = n_distinct(keyword))
+  
 ```
+
+```{r}
+search_results %>% 
+  filter(str_detect(keyword, "st louis"))
+```
+
+```{r}
+search_results %>% 
+  filter(search_engine == "Bing") %>% 
+  arrange(desc(rank_absolute)) %>% 
+  head(100)
+  distinct(keyword, .keep_all = T)
+```
+
+```{r}
+search_results %>% 
+  filter(keyword == "financial loan companies")
+```
+
 
 ```{r}
 search_results %>% 
@@ -169,5 +221,10 @@ search_results %>%
   distinct(keyword, search_engine)
 %>% 
   spread(keyword, search_engine)
+```
+
+```{r}
+search_results %>% 
+  filter(keyword == "prepaid customer service att")
 ```
 
