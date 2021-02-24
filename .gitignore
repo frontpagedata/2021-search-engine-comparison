@@ -46,3 +46,6 @@ raw_data/download_from_gdrive
 
 # ds store
 .DS_Store
+
+# large files
+proc_data/search_results.rds

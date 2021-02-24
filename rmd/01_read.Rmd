@@ -9,7 +9,7 @@ library(tidyverse)
 
 ```{r}
 ## function to create rds files of the data
-
+tictoc::tic() # < 3 mins
 create_rds_from_raw_file <- function(search_engine) {
   
   ## the delim for DuckDuck is different to the rest
@@ -18,10 +18,10 @@ create_rds_from_raw_file <- function(search_engine) {
     csv_colnames <- TRUE
   } else {
     csv_delim <- "~"
-    # csv_colnames <- c("entry_id", "keyword_id", "keyword", "type", "rank_group",
-    #                       "rank_absolute","page_num", "domain", "title", "url", "breadcrumb",
-    #                       "meta")
-    csv_colnames <- str_c("col_", 1:40)
+    csv_colnames <- c("entry_id", "keyword_id", "keyword", "type", "rank_group",
+                          "rank_absolute","page_num", "domain", "title", "url", "breadcrumb",
+                          "meta", "meta_2", "meta_3")
+    # csv_colnames <- str_c("col_", 1:40)
   }
   
   list_of_files <- list.files(here::here(str_c("raw_data/download_from_gdrive/", search_engine)))
@@ -46,6 +46,8 @@ search_results <- map_dfr(c("Google", "Bing", "Yahoo", "DuckDuck"),
 search_results %>% 
   glimpse()
 
+write_rds(search_results, here::here("proc_data/search_results.rds"))
+tictoc::toc()
 ```
 
 ```{r}
@@ -188,9 +190,8 @@ left_join(
   # head(100)
   group_by(google, bing, yahoo, duckduck) %>%
   mutate(rn = row_number()) %>%
-  filter(rn <= 5) %>%
-  arrange(desc(google), desc(yahoo), desc(duckduck), desc(bing)) 
-%>% 
+  # filter(rn <= 5) %>%
+  arrange(desc(google), desc(yahoo), desc(duckduck), desc(bing)) %>% 
   # write_csv(here::here("raw_data/missing_keywords.csv"))
   summarise(n = n_distinct(keyword))
   
