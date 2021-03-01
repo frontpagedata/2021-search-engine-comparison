@@ -151,7 +151,7 @@ I can simply check which of these are in all the stuff
 
 ```{r}
 keywords %>% 
-  select(keyword) %>% 
+  select(keyword, keyword_id) %>% 
   left_join(
     search_results %>% 
       filter(search_engine == "Google") %>% 
@@ -192,6 +192,18 @@ left_join(
   mutate(rn = row_number()) %>%
   # filter(rn <= 5) %>%
   arrange(desc(google), desc(yahoo), desc(duckduck), desc(bing)) %>% 
+  filter(google, yahoo, duckduck, bing,
+         !keyword %in% c("the rolling stones ",
+                         "4th of july ",
+                         "let's dance ")) %>% 
+  ungroup() %>% 
+  select(-google, -yahoo, -duckduck, -bing) %>% 
+  inner_join(
+    keywords,
+    by = c("keyword", "keyword_id")
+  ) %>% 
+  write_rds(here::here("proc_data/keywords.rds"))
+%>% 
   # write_csv(here::here("raw_data/missing_keywords.csv"))
   summarise(n = n_distinct(keyword))
   

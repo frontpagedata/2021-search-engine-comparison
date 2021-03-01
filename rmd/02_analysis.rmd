@@ -9,26 +9,46 @@ library(tidyverse)
 
 theme_set(theme_minimal())
 ```
-
-
 ```{r}
-search_results <- read_rds(here::here("proc_data/search_results.rds"))
-keywords <- read_csv(here::here("raw_data/download_from_gdrive/keywords_60k.csv"))
-```
-
-```{r}
-google <- search_results %>% 
-  filter(search_engine == "Google") %>% 
+extract_search_engine_results <- function(.data, engine) {
+  .data %>% 
+    select(-keyword_id) %>% 
+  filter(search_engine %in% engine) %>% 
+  ## these kyewords are formatted wrongly because they have the deilm in them
   filter(!keyword %in% c("the rolling stones ",
                          "4th of july ",
                          "let's dance "),
          !is.na(keyword)) %>% 
-  mutate_at(vars(rank_group, rank_absolute), ~as.numeric(.))
+  mutate_at(vars(rank_group, rank_absolute), ~as.numeric(.))  %>% 
+    inner_join(keywords,
+               by = "keyword")
+}
+
 ```
 
 
 ```{r}
-google %>% 
+tictoc::tic() # 1 min
+keywords <- read_rds(here::here("proc_data/keywords.rds"))
+search_results <- read_rds(here::here("proc_data/search_results.rds")) %>%
+  extract_search_engine_results(engine = c("Google", "Bing", "DuckDuck", "Yahoo"))
+# keywords <- read_csv(here::here("raw_data/download_from_gdrive/keywords_60k.csv"))
+tictoc::toc()
+```
+
+
+```{r}
+
+search_results %>% 
+  group_by(search_engine) %>% 
+  summarise(n = n_distinct(keyword))
+
+```
+
+
+
+```{r}
+search_results %>% 
   glimpse()
 ```
 
@@ -64,12 +84,26 @@ keywords %>%
 
 
 ```{r}
-google %>% 
-  group_by(type) %>% 
+search_results %>% 
+  filter(!is.na(keyword),
+         type %in% c("organic", "paid")) %>% 
+  mutate_at(vars(rank_group, rank_absolute), ~as.numeric(.)) %>% 
+  group_by(search_engine, type) %>% 
   summarise(n = n(),
             num_keywords = n_distinct(keyword),
-            average_rank = mean(rank_absolute))
+            average_rank = mean(rank_absolute)) 
 ```
+
+```{r}
+search_results %>% 
+  filter(type == "organic") %>% 
+  group_by(search_engine, rank_group) %>% 
+  summarise(n = n_distinct(keyword_id)) %>% 
+  ggplot(aes(x = rank_group, y = n)) +
+  geom_col() +
+  facet_wrap(vars(search_engine))
+```
+
 
 # EDA on keywords
 
@@ -88,5 +122,140 @@ keywords %>%
 ```{r}
 keywords %>% 
   count(monthly_search_volume_level, sort = T)
+```
+
+# Keyword comparison
+
+```{r}
+keywords %>% 
+  head(10)
+```
+
+```{r}
+google %>% 
+  filter(keyword == "dallas texas apartments") %>% 
+  filter(type == "organic") 
+```
+
+```{r}
+bing %>% 
+  filter(keyword == "dallas texas apartments") %>% 
+  filter(type == "organic") 
+```
+```{r}
+yahoo %>% 
+  filter(keyword == "dallas texas apartments") %>% 
+  filter(type == "organic") 
+```
+
+
+```{r}
+duckduck %>% 
+  filter(keyword == "dallas texas apartments") %>% 
+  filter(type == "organic") 
+```
+
+## How many have the top result in Google?
+
+```{r}
+search_results %>% 
+  filter(type == "organic",
+         rank_group == 1,
+         search_engine == "Google") %>% 
+  distinct(keyword_id, .keep_all = T) %>% 
+  select(keyword, keyword_id, url) %>% 
+  
+  left_join(
+    search_results %>% 
+      filter(type == "organic") %>% 
+      select(search_engine, keyword_id, rank_group, rank_absolute, url),
+    by = c("keyword_id", "url")
+  ) %>% 
+  arrange(rank_group) %>% 
+  distinct(keyword_id, search_engine, url, .keep_all = T) %>% 
+  arrange(keyword_id) %>% 
+  group_by(search_engine) %>% 
+  summarise(n = n_distinct(keyword_id),
+            mean(rank_group),
+            quantile(rank_group, 0.5))
+```
+
+```{r}
+search_results %>% 
+  filter(type == "organic",
+         rank_group == 1,
+         search_engine == "Google") %>% 
+  distinct(keyword_id, .keep_all = T) %>% 
+  select(keyword, keyword_id, url) %>% 
+  
+  left_join(
+    search_results %>% 
+      filter(type == "organic") %>% 
+      select(search_engine, keyword_id, rank_group, rank_absolute, url),
+    by = c("keyword_id", "url")
+  ) %>% 
+  arrange(rank_group) %>% 
+  distinct(keyword_id, search_engine, url, .keep_all = T) %>% 
+  # ggplot(aes(x = search_engine, y = rank_group)) +
+  # geom_boxplot()
+  count(search_engine, rank_group) %>% 
+  ggplot(aes(x = rank_group, y = n)) +
+  geom_col() +
+  facet_wrap(vars(search_engine))
+```
+
+```{r}
+search_results %>% 
+  filter(type == "organic",
+         rank_group == 1,
+         search_engine == "Google") %>% 
+  distinct(keyword_id, .keep_all = T) %>% 
+  mutate(monthly_search_volume_level = fct_relevel(monthly_search_volume_level,
+                                                   "500-1000",
+                                                   "1000-10000",
+                                                   "10000-100000")) %>% 
+  select(keyword, keyword_id, url, monthly_search_volume_level) %>% 
+
+  
+  left_join(
+    search_results %>% 
+      filter(type == "organic") %>% 
+      select(search_engine, keyword_id, rank_group, rank_absolute, url),
+    by = c("keyword_id", "url")
+  ) %>% 
+  arrange(rank_group) %>% 
+  distinct(keyword_id, search_engine, url, .keep_all = T) %>% 
+  select(-rank_absolute) %>% 
+  spread(search_engine, rank_group) %>% 
+  mutate_at(vars(Bing, DuckDuck, Google, Yahoo), funs(!is.na(.))) %>% 
+  gather(search_engine, result, Bing, DuckDuck, Google, Yahoo) %>% 
+  group_by(search_engine, monthly_search_volume_level) %>% 
+  summarise(result_perc = mean(result)) %>% 
+  filter(search_engine != "Google") %>% 
+  
+  ggplot(aes(monthly_search_volume_level, y = result_perc, colour = search_engine,
+             group = search_engine)) +
+  geom_line() +
+  geom_point()
+```
+
+```{r}
+keywords %>% 
+  
+```
+
+
+```{r}
+google %>% 
+  filter(keyword == "adams cleaners") %>% 
+  filter(type == "organic",
+         rank_group == 1) 
+```
+
+```{r}
+google %>% 
+  filter(type == "organic",
+         rank_group == 1) %>% 
+  distinct(keyword, .keep_all = T)
 ```
 
