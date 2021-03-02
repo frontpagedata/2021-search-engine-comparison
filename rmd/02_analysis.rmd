@@ -9,6 +9,7 @@ library(tidyverse)
 
 theme_set(theme_minimal())
 ```
+
 ```{r}
 extract_search_engine_results <- function(.data, engine) {
   .data %>% 
@@ -220,6 +221,7 @@ search_results %>%
   left_join(
     search_results %>% 
       filter(type == "organic") %>% 
+      filter(rank_group <= 5) %>% 
       select(search_engine, keyword_id, rank_group, rank_absolute, url),
     by = c("keyword_id", "url")
   ) %>% 
@@ -257,5 +259,44 @@ google %>%
   filter(type == "organic",
          rank_group == 1) %>% 
   distinct(keyword, .keep_all = T)
+```
+
+# Testing yahoo more closely
+
+```{r}
+search_results %>% 
+  # filter(search_engine == "Yahoo") %>% 
+  group_by(search_engine, keyword_id) %>% 
+  summarise(num_results = max(rank_absolute)) %>% 
+  ungroup() %>% 
+  count(search_engine, num_results, sort = T) %>% 
+  ggplot(aes(x = num_results, y = n)) +
+  geom_col() +
+  facet_wrap(vars(search_engine))
+```
+
+
+# Keyword categories
+
+```{r}
+keywords %>% 
+  glimpse()
+```
+
+```{r}
+keywords %>% 
+  filter(keyword_id == 17356)
+```
+
+```{r}
+product_services <- read_delim(here::here("raw_data/productsservices.csv"),
+                                escape_double = F,
+            escape_backslash = F,
+            delim = """")
+```
+
+```{r}
+product_services %>% 
+  filter(!is.na(Category))
 ```
 
