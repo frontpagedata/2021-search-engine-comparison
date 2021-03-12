@@ -1,7 +1,15 @@
 ---
-title: "R Notebook"
+title: "01 Read"
 output: html_notebook
 ---
+
+The following notebook creates the processed data that is used in the analysis.
+
+In the first section, it conbines the raw search results downloaded from GDrive. These are not uploaded to Github due to the size. 
+
+The second section processes the keywords file. The `search_results` are used to only keep `keywords` that were found in all four search engines. There are ~400 (out of 60k) that are therefore excluded.
+
+# Read in and process raw search results
 
 ```{r}
 library(tidyverse)
@@ -50,44 +58,7 @@ write_rds(search_results, here::here("proc_data/search_results.rds"))
 tictoc::toc()
 ```
 
-```{r}
-test_import <- read_delim(
-            here::here(str_c("raw_data/download_from_gdrive/", "Google", "/", "0-5000.csv")),
-            delim = "~",
-            escape_double = F,
-            escape_backslash = F,
-            col_names = str_c("col_", 1:40),
-            col_types = cols(.default = col_character())
-)
 
-test_import %>% 
-  problems() %>% 
-  arrange(desc(actual))
-```
-
-```{r}
-test_import %>% 
-  filter(row_number() == 30842)
-```
-
-
-```{r}
-search_results %>% 
-  count(search_engine)
-```
-
-```{r}
-search_results %>% 
-  group_by(search_engine) %>% 
-  summarise(n_distinct(keyword), min(keyword), max(keyword))
-```
-
-So it seems there's a lot of cleaning to do with this data 
-```{r}
-search_results %>% 
-  filter(search_engine == "Bing") %>% 
-  head(100)
-```
 
 
 # Keywords
@@ -97,55 +68,11 @@ search_results %>%
 keywords <- read_csv(here::here("raw_data/download_from_gdrive/keywords_60k.csv"))
 ```
 
-```{r}
-keywords %>% 
-  glimpse()
-```
 
-```{r}
-keywords %>% 
-  mutate(nchar(keyword)) %>% 
-  summarise(
-    n = n_distinct(keyword),
-    min(keyword),
-    max(keyword)
-  )
-```
-
-```{r}
-search_results %>% 
-  distinct(keyword, .keep_all = T) %>% 
-  
-  anti_join(
-    keywords %>% 
-      select(-keyword_id),
-    by = "keyword"
-  ) %>% 
-  count()
-```
 
 So need to be careful about the dominoes pizza search result. Honestly, may be esier tojust remove this. keyword 3733
 
-```{r}
-keywords %>% 
-  
-  anti_join(
-    search_results %>% 
-      select(-keyword_id) %>% 
-      filter(search_engine == "Bing"),
-    by = "keyword"
-  ) %>% 
-  head(100)
-  select(keyword_id, keyword, search_engine) %>%
-  head(10)
-  group_by(search_engine) %>% 
-  summarise(n = n_distinct(keyword))
-```
 
-```{r}
-keywords %>% 
-  filter(keyword == "-1.875 as a fraction")
-```
 
 I can simply check which of these are in all the stuff
 
@@ -209,35 +136,5 @@ left_join(
   
 ```
 
-```{r}
-search_results %>% 
-  filter(str_detect(keyword, "st louis"))
-```
 
-```{r}
-search_results %>% 
-  filter(search_engine == "Bing") %>% 
-  arrange(desc(rank_absolute)) %>% 
-  head(100)
-  distinct(keyword, .keep_all = T)
-```
-
-```{r}
-search_results %>% 
-  filter(keyword == "financial loan companies")
-```
-
-
-```{r}
-search_results %>% 
-  head(10000) %>% 
-  distinct(keyword, search_engine)
-%>% 
-  spread(keyword, search_engine)
-```
-
-```{r}
-search_results %>% 
-  filter(keyword == "prepaid customer service att")
-```
 

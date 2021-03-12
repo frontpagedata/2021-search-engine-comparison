@@ -221,7 +221,7 @@ search_results %>%
   left_join(
     search_results %>% 
       filter(type == "organic") %>% 
-      filter(rank_group <= 5) %>% 
+      filter(rank_group <= 30) %>% 
       select(search_engine, keyword_id, rank_group, rank_absolute, url),
     by = c("keyword_id", "url")
   ) %>% 
@@ -242,7 +242,7 @@ search_results %>%
 ```
 
 ```{r}
-keywords %>% 
+
   
 ```
 
@@ -292,11 +292,147 @@ keywords %>%
 product_services <- read_delim(here::here("raw_data/productsservices.csv"),
                                 escape_double = F,
             escape_backslash = F,
-            delim = """")
+            delim = ",")
+
+product_services <- read_csv(here::here("raw_data/productsservices.csv"))
+```
+
+```{r}
+product_services
 ```
 
 ```{r}
 product_services %>% 
-  filter(!is.na(Category))
+  select(-Category) %>% 
+  mutate(criterion_id = str_extract(`Criterion ID`, "^(.+?),"),
+         category = str_extract(`Criterion ID`, "/.*$")) %>% 
+  separate(category, sep = "/", into = glue::glue("category_level_{0:9}")) %>% 
+  mutate(criterion_id = str_remove_all(criterion_id, ",")) %>% 
+  mutate_at(vars(starts_with("category_level_")), ~str_remove_all(., "\"")) %>% 
+  select(criterion_id, category_level_1:category_level_9) %>% 
+  write_rds(here::here("proc_data/dim_category.rds"))
 ```
 
+
+```{r}
+product_services <- read_rds(here::here("proc_data/dim_category.rds"))
+```
+
+
+```{r}
+product_services %>% 
+  glimpse()
+```
+
+```{r}
+product_services %>% 
+  filter(is.na(category_level_2))
+```
+
+
+```{r}
+keywords %>% 
+  glimpse()
+```
+
+```{r}
+keywords %>% 
+  # filter(keyword == "dallas texas apartments") %>%
+  mutate(keyword_info_categories = str_remove_all(keyword_info_categories,
+                                                  "\\[") %>% 
+           str_remove_all("\\]")) %>% 
+  separate_rows(keyword_info_categories, sep = ",") %>% 
+  mutate(keyword_info_categories = str_trim(keyword_info_categories,
+                                            "both")) %>% 
+  inner_join(
+    product_services %>% 
+  filter(is.na(category_level_2)) %>% 
+    select(criterion_id, keyword_category = category_level_1),
+  by = c("keyword_info_categories" = "criterion_id")
+  ) %>% 
+  select(keyword_id, keyword_category)
+%>% 
+  count(keyword_category, sort = T)
+```
+
+
+```{r}
+search_results %>% 
+  filter(type == "organic",
+         rank_group == 1,
+         search_engine == "Google") %>% 
+  distinct(keyword_id, .keep_all = T) %>% 
+  mutate(monthly_search_volume_level = fct_relevel(monthly_search_volume_level,
+                                                   "500-1000",
+                                                   "1000-10000",
+                                                   "10000-100000")) %>% 
+  select(keyword, keyword_id, url, monthly_search_volume_level) %>%
+  # head(100)
+
+  
+  left_join(
+    search_results %>% 
+      filter(type == "organic") %>% 
+      filter(rank_group <= 5) %>% 
+      select(search_engine, keyword_id, rank_group, rank_absolute, url),
+    by = c("keyword_id", "url")
+  ) %>% 
+  arrange(rank_group) %>% 
+  distinct(keyword_id, search_engine, url, .keep_all = T) %>% 
+  select(-rank_absolute) %>% 
+  spread(search_engine, rank_group) %>% 
+  mutate_at(vars(Bing, DuckDuck, Google, Yahoo), funs(!is.na(.))) %>% 
+  # head(100)
+  gather(search_engine, result, Bing, DuckDuck, Google, Yahoo) %>% 
+  
+  ## add keyword categories
+  left_join(
+    keywords %>% 
+  # filter(keyword == "dallas texas apartments") %>%
+  mutate(keyword_info_categories = str_remove_all(keyword_info_categories,
+                                                  "\\[") %>% 
+           str_remove_all("\\]")) %>% 
+  separate_rows(keyword_info_categories, sep = ",") %>% 
+  mutate(keyword_info_categories = str_trim(keyword_info_categories,
+                                            "both")) %>% 
+  inner_join(
+    product_services %>% 
+  filter(is.na(category_level_2)) %>% 
+    select(criterion_id, keyword_category = category_level_1),
+  by = c("keyword_info_categories" = "criterion_id")
+  ) %>% 
+  select(keyword_id, keyword_category),
+  by = "keyword_id"
+  ) %>% 
+  
+  
+  group_by(search_engine, keyword_category) %>% 
+  summarise(n= n(),
+            result_perc = mean(result)) %>% 
+  
+  filter(search_engine != "Google") %>% 
+  ## sort by descending category
+  
+  ungroup() %>% 
+  group_by(keyword_category) %>% 
+  mutate(result_perc_group = mean(result_perc)) %>% 
+  ungroup() %>% 
+  mutate(keyword_category = fct_reorder(keyword_category,
+                                        result_perc_group)) %>% 
+  
+  
+  ggplot(aes(x = keyword_category, y = result_perc,
+             group = search_engine, colour = search_engine)) +
+  geom_point() +
+  coord_flip()
+  
+  
+  ggplot(aes(monthly_search_volume_level, y = result_perc, colour = search_engine,
+             group = search_engine)) +
+  geom_line() +
+  geom_point()
+```
+
+
+
+Can get
