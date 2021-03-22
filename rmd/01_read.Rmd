@@ -1,15 +1,82 @@
 ---
-title: "R Notebook"
-output: html_notebook
+title: "01 Read"
+date: "Last update: `r Sys.Date()`"
+output:
+  html_document:
+    theme: paper
+    highlight: kate
+    code_folding: hide
+    toc_depth: 3
+    toc_float: true
 ---
 
-```{r}
-library(tidyverse)
+<style>
+.list-group-item.active, .list-group-item.active:hover, .list-group-item.active:focus {
+  background-color: #00d188;
+  border-color: #00d188;
+}
+
+body {
+  font-family: montserrat;
+  color: #444444;
+  font-size: 14px;
+}
+
+h1 {
+  font-weight: bold;
+  font-size: 28px;
+}
+
+h1.title {
+  font-size: 30px;
+  color: #00d188;
+}
+
+h2 {
+  font-size: 24px;
+}
+
+h3 {
+  font-size: 18px;
+}
+</style>
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.showtext = TRUE)
+knitr::knit_hooks$set(inline = function(x) {
+  prettyNum(x, big.mark = ",", small.mark = ",", scientific = F)
+})
+
+library(tidyverse) # package used for data wrangling
 ```
 
-```{r}
-## function to create rds files of the data
-tictoc::tic() # < 3 mins
+
+This notebook contains the code used to perform an initial processing of the raw datasets:
+
+1. Search results
+2. Keywords
+3. Keyword categories
+
+In the first section, it conbines the raw search results downloaded from GDrive. These are not uploaded to Github due to the size. 
+
+The second section processes the keywords file. The `search_results` are used to only keep `keywords` that were found in all four search engines. There are ~400 (out of 60k) that are therefore excluded.
+
+# Search results
+
+The search results are held in separate files and folders. The original raw files can be found in this Google drive folder. These were downloaded and copied locally. Unfortunately, due to the size of this data, it was not possible to upload to github. This means, if you would like to reproduce this code, you will need to download the files locally as well and save them in the `/raw_data/download_from_gdrive/` folder.
+
+## Some other notes from the web scraping expert
+
+1. The keyword is correctly mapped, however `entry_id` might be duplicating within the same file as well as across different files.
+2. The delimiter for DuckDuckGo is `\t` and the delimiter for the others is `~`.
+3. A few results for Google, Yahoo, and Bing have this issue where the keyword contains the character `~` which is the same as the delimiter. 
+4. The headers are as follows: `id_entry`, `id_keyword`, `keyword_type`, `rank_group`, `rank_absolute`, `page_num`, `domain`, `title`, `url`, `breadcrumb`, `meta`.
+
+
+The following code takes each of these raw files and combines them into one `search_results` dataframe.
+
+
+```{r clean_search_results, echo = T}
 create_rds_from_raw_file <- function(search_engine) {
   
   ## the delim for DuckDuck is different to the rest
@@ -24,6 +91,7 @@ create_rds_from_raw_file <- function(search_engine) {
     # csv_colnames <- str_c("col_", 1:40)
   }
   
+  ## files were too large to upload to github but are stored here
   list_of_files <- list.files(here::here(str_c("raw_data/download_from_gdrive/", search_engine)))
   
   map_dfr(list_of_files,
@@ -43,113 +111,22 @@ create_rds_from_raw_file <- function(search_engine) {
 search_results <- map_dfr(c("Google", "Bing", "Yahoo", "DuckDuck"),
                           ~create_rds_from_raw_file(.))
 
-search_results %>% 
-  glimpse()
+# search_results %>% 
+#   glimpse()
 
 write_rds(search_results, here::here("proc_data/search_results.rds"))
-tictoc::toc()
 ```
-
-```{r}
-test_import <- read_delim(
-            here::here(str_c("raw_data/download_from_gdrive/", "Google", "/", "0-5000.csv")),
-            delim = "~",
-            escape_double = F,
-            escape_backslash = F,
-            col_names = str_c("col_", 1:40),
-            col_types = cols(.default = col_character())
-)
-
-test_import %>% 
-  problems() %>% 
-  arrange(desc(actual))
-```
-
-```{r}
-test_import %>% 
-  filter(row_number() == 30842)
-```
-
-
-```{r}
-search_results %>% 
-  count(search_engine)
-```
-
-```{r}
-search_results %>% 
-  group_by(search_engine) %>% 
-  summarise(n_distinct(keyword), min(keyword), max(keyword))
-```
-
-So it seems there's a lot of cleaning to do with this data 
-```{r}
-search_results %>% 
-  filter(search_engine == "Bing") %>% 
-  head(100)
-```
-
 
 # Keywords
 
-```{r}
-# keywords <- read_rds(here::here("raw_data/keywords_120k.rds"))
+60k keywords were used for the final scraping. The following code will check what keywords are present in all of the search results. Out of the 60k keywords, ~400 have been removed as they were not present in all.
+
+
+```{r clean_keywords,echo = T}
 keywords <- read_csv(here::here("raw_data/download_from_gdrive/keywords_60k.csv"))
-```
 
-```{r}
-keywords %>% 
-  glimpse()
-```
-
-```{r}
-keywords %>% 
-  mutate(nchar(keyword)) %>% 
-  summarise(
-    n = n_distinct(keyword),
-    min(keyword),
-    max(keyword)
-  )
-```
-
-```{r}
-search_results %>% 
-  distinct(keyword, .keep_all = T) %>% 
-  
-  anti_join(
-    keywords %>% 
-      select(-keyword_id),
-    by = "keyword"
-  ) %>% 
-  count()
-```
-
-So need to be careful about the dominoes pizza search result. Honestly, may be esier tojust remove this. keyword 3733
-
-```{r}
-keywords %>% 
-  
-  anti_join(
-    search_results %>% 
-      select(-keyword_id) %>% 
-      filter(search_engine == "Bing"),
-    by = "keyword"
-  ) %>% 
-  head(100)
-  select(keyword_id, keyword, search_engine) %>%
-  head(10)
-  group_by(search_engine) %>% 
-  summarise(n = n_distinct(keyword))
-```
-
-```{r}
-keywords %>% 
-  filter(keyword == "-1.875 as a fraction")
-```
-
-I can simply check which of these are in all the stuff
-
-```{r}
+## only keep keywords that are in all the files
+## removes < 500 keywords (out of a total of 60k)
 keywords %>% 
   select(keyword, keyword_id) %>% 
   left_join(
@@ -193,6 +170,8 @@ left_join(
   # filter(rn <= 5) %>%
   arrange(desc(google), desc(yahoo), desc(duckduck), desc(bing)) %>% 
   filter(google, yahoo, duckduck, bing,
+         ## the following keywords have the delimiter in their string so cause issues further on
+         ## as there are only 3, removing them all for now
          !keyword %in% c("the rolling stones ",
                          "4th of july ",
                          "let's dance ")) %>% 
@@ -203,41 +182,21 @@ left_join(
     by = c("keyword", "keyword_id")
   ) %>% 
   write_rds(here::here("proc_data/keywords.rds"))
-%>% 
-  # write_csv(here::here("raw_data/missing_keywords.csv"))
-  summarise(n = n_distinct(keyword))
-  
 ```
 
-```{r}
-search_results %>% 
-  filter(str_detect(keyword, "st louis"))
-```
+## Keywords categories
 
-```{r}
-search_results %>% 
-  filter(search_engine == "Bing") %>% 
-  arrange(desc(rank_absolute)) %>% 
-  head(100)
-  distinct(keyword, .keep_all = T)
-```
+The category mappings for each keyword are held in a different file. These are loaded and cleaned in preparation for the analysis stage.
 
-```{r}
-search_results %>% 
-  filter(keyword == "financial loan companies")
-```
-
-
-```{r}
-search_results %>% 
-  head(10000) %>% 
-  distinct(keyword, search_engine)
-%>% 
-  spread(keyword, search_engine)
-```
-
-```{r}
-search_results %>% 
-  filter(keyword == "prepaid customer service att")
+```{r, echo = F}
+read_csv(here::here("raw_data/productsservices.csv")) %>% 
+  select(-Category) %>% 
+  mutate(criterion_id = str_extract(`Criterion ID`, "^(.+?),"),
+         category = str_extract(`Criterion ID`, "/.*$")) %>% 
+  separate(category, sep = "/", into = glue::glue("category_level_{0:9}")) %>% 
+  mutate(criterion_id = str_remove_all(criterion_id, ",")) %>% 
+  mutate_at(vars(starts_with("category_level_")), ~str_remove_all(., "\"")) %>% 
+  select(criterion_id, category_level_1:category_level_9) %>% 
+  write_rds(here::here("proc_data/dim_category.rds"))
 ```
 
