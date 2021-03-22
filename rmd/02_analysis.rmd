@@ -1,16 +1,77 @@
 ---
-title: "R Notebook"
-output: html_notebook
+title: "02 Analysis"
+date: "Last update: `r Sys.Date()`"
+output:
+  html_document:
+    theme: paper
+    highlight: kate
+    code_folding: hide
+    toc_depth: 3
+    toc_float: true
 ---
+<style>
+.list-group-item.active, .list-group-item.active:hover, .list-group-item.active:focus {
+  background-color: #00d188;
+  border-color: #00d188;
+}
 
+body {
+  font-family: montserrat;
+  color: #444444;
+  font-size: 14px;
+}
 
-```{r}
-library(tidyverse)
+h1 {
+  font-weight: bold;
+  font-size: 28px;
+}
 
-theme_set(theme_minimal())
+h1.title {
+  font-size: 30px;
+  color: #00d188;
+}
+
+h2 {
+  font-size: 24px;
+}
+
+h3 {
+  font-size: 18px;
+}
+</style>
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.showtext = TRUE)
+knitr::knit_hooks$set(inline = function(x) {
+  prettyNum(x, big.mark = ",", small.mark = ",", scientific = F)
+})
 ```
 
-```{r}
+
+Google is said to have the most accurate search engine (X% market share). We wanted to test how accurate the other main search engines (Bing, DuckDuckGo, and Yahoo) are compared to Google.
+
+We analysed 60k search results from each search engine and came up with some interesting insights.
+
+# Summary of insights (so far)
+
+1. DuckDuckGo is the most accurate search engine when compared to Google. Google's #1 search result was found in DuckDuckGo's top 10 66.6% of the time. Bing is close with 65.9% and Yahoo worse at 61.8%.
+
+2. For all search engines, the higher the search volume, the more accurate the search result will be. In particular searches that have a search volume of more than 10k are ~3% more accurate.
+
+3. The accuracy of the search engines differs by category. Real Estate, Travel & Tourism, and Retailers & General Merchandise are more accurate across _all_ search engines. While Apparel, Beauty & Personal Care, and Home & Garden are less accurate.
+
+4. The number of words in the search term is negatively correlated with accuracy. Search terms with _just_ one word are ~8% more accurate than those with multiple words
+
+
+
+
+```{r load_and_setup, echo = T}
+library(tidyverse) # package used for data wrangling
+# options(dplyr.summarise.inform = F)
+theme_set(theme_minimal() +
+            theme(plot.title = element_text(size = 15)))
+
+## function to clean search engine data
 extract_search_engine_results <- function(.data, engine) {
   .data %>% 
     select(-keyword_id) %>% 
@@ -25,187 +86,74 @@ extract_search_engine_results <- function(.data, engine) {
                by = "keyword")
 }
 
-```
 
-
-```{r}
-tictoc::tic() # 1 min
+## read in required data
 keywords <- read_rds(here::here("proc_data/keywords.rds"))
 search_results <- read_rds(here::here("proc_data/search_results.rds")) %>%
   extract_search_engine_results(engine = c("Google", "Bing", "DuckDuck", "Yahoo"))
-# keywords <- read_csv(here::here("raw_data/download_from_gdrive/keywords_60k.csv"))
-tictoc::toc()
+product_services <- read_rds(here::here("proc_data/dim_category.rds"))
 ```
 
 
-```{r}
+## How accurate are the other search engines?
 
-search_results %>% 
-  group_by(search_engine) %>% 
-  summarise(n = n_distinct(keyword))
+We developed an accuracy measure that counts how many times a search engines results contains Google's #1 result in their top 10. 
 
-```
+If the search engine contained Google's #1 result for all of their keywords their accuracy would be 100%. While if they did not, their accuracy would be 0%.
 
+With this measure of accuracy, DuckDuckGo is the most accurate search engine of the three.
 
-
-```{r}
-search_results %>% 
-  glimpse()
-```
-
-```{r}
-google %>% 
-  skimr::skim()
-```
-
-```{r}
-google %>% 
-  filter(!keyword %in% c("the rolling stones ",
-                         "4th of july ",
-                         "let's dance "),
-         !is.na(keyword)) %>% 
-  mutate_at(vars(rank_group, rank_absolute), ~as.numeric(.)) %>% 
-  count(rank_group) %>% 
-  ggplot(aes(x = rank_group, y = n)) +
-  geom_col()
-```
-
-
-
-```{r}
-keywords %>% 
-  filter(keyword_id == 48819)
-```
-
-```{r}
-keywords %>% 
-  filter(str_detect(keyword, "~"))
-```
-
-
-
-```{r}
-search_results %>% 
-  filter(!is.na(keyword),
-         type %in% c("organic", "paid")) %>% 
-  mutate_at(vars(rank_group, rank_absolute), ~as.numeric(.)) %>% 
-  group_by(search_engine, type) %>% 
-  summarise(n = n(),
-            num_keywords = n_distinct(keyword),
-            average_rank = mean(rank_absolute)) 
-```
-
-```{r}
-search_results %>% 
-  filter(type == "organic") %>% 
-  group_by(search_engine, rank_group) %>% 
-  summarise(n = n_distinct(keyword_id)) %>% 
-  ggplot(aes(x = rank_group, y = n)) +
-  geom_col() +
-  facet_wrap(vars(search_engine))
-```
-
-
-# EDA on keywords
-
-```{r}
-keywords %>% 
-  glimpse()
-```
-
-```{r}
-keywords %>% 
-  skimr::skim()
-```
-
-
-
-```{r}
-keywords %>% 
-  count(monthly_search_volume_level, sort = T)
-```
-
-# Keyword comparison
-
-```{r}
-keywords %>% 
-  head(10)
-```
-
-```{r}
-google %>% 
-  filter(keyword == "dallas texas apartments") %>% 
-  filter(type == "organic") 
-```
-
-```{r}
-bing %>% 
-  filter(keyword == "dallas texas apartments") %>% 
-  filter(type == "organic") 
-```
-```{r}
-yahoo %>% 
-  filter(keyword == "dallas texas apartments") %>% 
-  filter(type == "organic") 
-```
-
-
-```{r}
-duckduck %>% 
-  filter(keyword == "dallas texas apartments") %>% 
-  filter(type == "organic") 
-```
-
-## How many have the top result in Google?
-
-```{r}
+```{r, echo = T}
 search_results %>% 
   filter(type == "organic",
          rank_group == 1,
          search_engine == "Google") %>% 
   distinct(keyword_id, .keep_all = T) %>% 
+  mutate(monthly_search_volume_level = fct_relevel(monthly_search_volume_level,
+                                                   "500-1000",
+                                                   "1000-10000",
+                                                   "10000-100000")) %>% 
   select(keyword, keyword_id, url) %>% 
-  
   left_join(
     search_results %>% 
       filter(type == "organic") %>% 
+      filter(rank_group <= 10) %>% 
       select(search_engine, keyword_id, rank_group, rank_absolute, url),
     by = c("keyword_id", "url")
   ) %>% 
   arrange(rank_group) %>% 
   distinct(keyword_id, search_engine, url, .keep_all = T) %>% 
-  arrange(keyword_id) %>% 
+  select(-rank_absolute) %>% 
+  spread(search_engine, rank_group) %>% 
+  mutate_at(vars(Bing, DuckDuck, Google, Yahoo), funs(!is.na(.))) %>% 
+  gather(search_engine, result, Bing, DuckDuck, Google, Yahoo) %>% 
   group_by(search_engine) %>% 
-  summarise(n = n_distinct(keyword_id),
-            mean(rank_group),
-            quantile(rank_group, 0.5))
+  summarise(result_perc = mean(result)) %>% 
+  filter(search_engine != "Google") %>% 
+  rename(Accuracy = result_perc) %>% 
+  mutate(Accuracy = scales::percent(Accuracy)) %>% 
+  arrange(desc(Accuracy))
 ```
 
-```{r}
-search_results %>% 
-  filter(type == "organic",
-         rank_group == 1,
-         search_engine == "Google") %>% 
-  distinct(keyword_id, .keep_all = T) %>% 
-  select(keyword, keyword_id, url) %>% 
+### Monthly search volume
+
+The sample of 60k search keywords were chosen so we got a fairly even split across different search volumes. 
+
+```{r, echo = T}
+keywords %>% 
+  mutate(monthly_search_volume_level = fct_relevel(monthly_search_volume_level,
+                                                   "500-1000",
+                                                   "1000-10000",
+                                                   "10000-100000")) %>% 
+  count(monthly_search_volume_level) %>% 
+  rename(Count = n) %>% 
+  mutate(Count = scales::comma(Count))
   
-  left_join(
-    search_results %>% 
-      filter(type == "organic") %>% 
-      select(search_engine, keyword_id, rank_group, rank_absolute, url),
-    by = c("keyword_id", "url")
-  ) %>% 
-  arrange(rank_group) %>% 
-  distinct(keyword_id, search_engine, url, .keep_all = T) %>% 
-  # ggplot(aes(x = search_engine, y = rank_group)) +
-  # geom_boxplot()
-  count(search_engine, rank_group) %>% 
-  ggplot(aes(x = rank_group, y = n)) +
-  geom_col() +
-  facet_wrap(vars(search_engine))
 ```
 
-```{r}
+This means we're able to determine how search volume may affect the accuracy of the search engines. As you can see from the chart below, the higher the search volume of the keyword the higher the accuracy. In particular keywords with >10k in search volume are ~3% more accurate.
+
+```{r, echo = T}
 search_results %>% 
   filter(type == "organic",
          rank_group == 1,
@@ -221,7 +169,7 @@ search_results %>%
   left_join(
     search_results %>% 
       filter(type == "organic") %>% 
-      filter(rank_group <= 30) %>% 
+      filter(rank_group <= 10) %>% 
       select(search_engine, keyword_id, rank_group, rank_absolute, url),
     by = c("keyword_id", "url")
   ) %>% 
@@ -238,125 +186,54 @@ search_results %>%
   ggplot(aes(monthly_search_volume_level, y = result_perc, colour = search_engine,
              group = search_engine)) +
   geom_line() +
-  geom_point()
-```
-
-```{r}
-
-  
-```
-
-
-```{r}
-google %>% 
-  filter(keyword == "adams cleaners") %>% 
-  filter(type == "organic",
-         rank_group == 1) 
-```
-
-```{r}
-google %>% 
-  filter(type == "organic",
-         rank_group == 1) %>% 
-  distinct(keyword, .keep_all = T)
-```
-
-# Testing yahoo more closely
-
-```{r}
-search_results %>% 
-  # filter(search_engine == "Yahoo") %>% 
-  group_by(search_engine, keyword_id) %>% 
-  summarise(num_results = max(rank_absolute)) %>% 
-  ungroup() %>% 
-  count(search_engine, num_results, sort = T) %>% 
-  ggplot(aes(x = num_results, y = n)) +
-  geom_col() +
-  facet_wrap(vars(search_engine))
+  geom_point() +
+  scale_y_continuous(labels = scales::label_percent()) +
+  labs(title = str_wrap("Search Engine Accuracy by Keyword's Monthly Search Volume", 50),
+       subtitle = "Top 10",
+       colour = "Search Engine", 
+       x = "Monthly Search Volume",
+       y = "Search Engine Accuracy")
 ```
 
 
-# Keyword categories
 
-```{r}
-keywords %>% 
-  glimpse()
-```
+### Keyword categories
 
-```{r}
-keywords %>% 
-  filter(keyword_id == 17356)
-```
+Each of the keywords comes with categories (or tags). It's possible for keywords to belong to more than one category. The sample of 60k keywords was drawn randomly so we don't expect to have an equal amount in each category. 
 
-```{r}
-product_services <- read_delim(here::here("raw_data/productsservices.csv"),
-                                escape_double = F,
-            escape_backslash = F,
-            delim = ",")
+The most common categories are News, Media & Publications, Arts & Entertainment, Business & Industrial, and Hobbies & Leisure.
 
-product_services <- read_csv(here::here("raw_data/productsservices.csv"))
-```
-
-```{r}
-product_services
-```
-
-```{r}
-product_services %>% 
-  select(-Category) %>% 
-  mutate(criterion_id = str_extract(`Criterion ID`, "^(.+?),"),
-         category = str_extract(`Criterion ID`, "/.*$")) %>% 
-  separate(category, sep = "/", into = glue::glue("category_level_{0:9}")) %>% 
-  mutate(criterion_id = str_remove_all(criterion_id, ",")) %>% 
-  mutate_at(vars(starts_with("category_level_")), ~str_remove_all(., "\"")) %>% 
-  select(criterion_id, category_level_1:category_level_9) %>% 
-  write_rds(here::here("proc_data/dim_category.rds"))
-```
-
-
-```{r}
-product_services <- read_rds(here::here("proc_data/dim_category.rds"))
-```
-
-
-```{r}
-product_services %>% 
-  glimpse()
-```
-
-```{r}
-product_services %>% 
-  filter(is.na(category_level_2))
-```
-
-
-```{r}
-keywords %>% 
-  glimpse()
-```
-
-```{r}
-keywords %>% 
-  # filter(keyword == "dallas texas apartments") %>%
+```{r, echo = T}
+keywords %>%
   mutate(keyword_info_categories = str_remove_all(keyword_info_categories,
                                                   "\\[") %>% 
            str_remove_all("\\]")) %>% 
   separate_rows(keyword_info_categories, sep = ",") %>% 
   mutate(keyword_info_categories = str_trim(keyword_info_categories,
                                             "both")) %>% 
-  inner_join(
+   inner_join(
     product_services %>% 
-  filter(is.na(category_level_2)) %>% 
-    select(criterion_id, keyword_category = category_level_1),
-  by = c("keyword_info_categories" = "criterion_id")
-  ) %>% 
-  select(keyword_id, keyword_category)
-%>% 
-  count(keyword_category, sort = T)
+      filter(is.na(category_level_2)) %>% 
+        select(criterion_id, keyword_category = category_level_1),
+      by = c("keyword_info_categories" = "criterion_id")
+      ) %>% 
+  count(keyword_category) %>% 
+  ggplot(aes(x = keyword_category, y = n)) +
+  geom_col() +
+  coord_flip() +
+  scale_y_continuous(labels = scales::label_comma()) +
+
+  labs(title = "# of Keywords by Category",
+       x = "Keyword Category",
+       y = NULL)
+  
 ```
 
+The following chart shows that there is significant variance in accuracy depending on what category the keyword belongs too.Real Estate, Travel & Tourism, Retailers & General Merchandise, and Dining & Nightlife are the four most accurate categories across all the search engines (between 67% and 75%). While Home & Garden, Apparel, and Beauty & Personal Care are least accurate (between 55% and 61%).
 
-```{r}
+Yahoo is also particularly less accurate in a couple of categories. For example, in Health Yahoo is 60% accurate (vs ~67% for the other two search engines). Similarly for Food & Groceries, and Beauty & Personal Care.
+
+```{r, echo = T}
 search_results %>% 
   filter(type == "organic",
          rank_group == 1,
@@ -373,7 +250,7 @@ search_results %>%
   left_join(
     search_results %>% 
       filter(type == "organic") %>% 
-      filter(rank_group <= 5) %>% 
+      filter(rank_group <= 10) %>% 
       select(search_engine, keyword_id, rank_group, rank_absolute, url),
     by = c("keyword_id", "url")
   ) %>% 
@@ -419,20 +296,173 @@ search_results %>%
   ungroup() %>% 
   mutate(keyword_category = fct_reorder(keyword_category,
                                         result_perc_group)) %>% 
+  filter(!is.na(keyword_category)) %>% 
   
   
   ggplot(aes(x = keyword_category, y = result_perc,
              group = search_engine, colour = search_engine)) +
   geom_point() +
-  coord_flip()
+  coord_flip() +
+  scale_y_continuous(labels = scales::label_percent()) +
+  labs(title = str_wrap("Search Engine Accuracy by Keyword Category", 30),
+       subtitle = "Top 10",
+       colour = "Search Engine", 
+       x = "Keyword Category",
+       y = "Search Engine Accuracy")
+```
+
+
+### Number of words
+
+Most keywords (search terms) have between 2 and 4 words. There are also 29 search terms that have at least 10 words. For example `what are the first ten amendments to the constitution called` and `how long does it take to become a pediatric nurse`.
+
+```{r, echo = T}
+keywords %>% 
+  mutate(keyword_length = nchar(keyword),
+         keyword_length = str_count(keyword, " ") + 1) %>% 
+  # filter(keyword_length == 1)
+  count(keyword_length) %>% 
+  ggplot(aes(x = keyword_length, y = n)) +
+  geom_col() +
+  scale_x_continuous(breaks = seq(0, 10, 1)) +
+  labs(title = "Keywords by # of Words",
+       y = "# of Keywords",
+       x = "# of Words in Keyword") +
+  scale_y_continuous(labels = scales::label_comma())
+```
+
+For all three search engines, the search terms with only one word are the most accurate. On average these are ~8% more accurate. More analysis on this is required to fully understand these trends. It would be good to cut this by category or by search volume to ensure we are not masking any obvious trends in the data.
+
+```{r, echo = T}
+search_results %>% 
+  filter(type == "organic",
+         rank_group == 1,
+         search_engine == "Google") %>% 
+  distinct(keyword_id, .keep_all = T) %>% 
+  mutate(keyword_length = case_when(
+    # nchar(keyword) <= 8 ~ 8,
+    # nchar(keyword) >= 28 ~ 28,
+    str_count(keyword, " ") >= 5 ~ 5,
+    TRUE ~ str_count(keyword, " ") + 1
+  )) %>% 
+  mutate(monthly_search_volume_level = fct_relevel(monthly_search_volume_level,
+                                                   "500-1000",
+                                                   "1000-10000",
+                                                   "10000-100000")) %>% 
+  select(keyword, keyword_id, url, keyword_length) %>% 
+
   
+  left_join(
+    search_results %>% 
+      filter(type == "organic") %>% 
+      filter(rank_group <= 10) %>% 
+      select(search_engine, keyword_id, rank_group, rank_absolute, url),
+    by = c("keyword_id", "url")
+  ) %>% 
+  arrange(rank_group) %>% 
+  distinct(keyword_id, search_engine, url, .keep_all = T) %>% 
+  select(-rank_absolute) %>% 
+  spread(search_engine, rank_group) %>% 
+  mutate_at(vars(Bing, DuckDuck, Google, Yahoo), funs(!is.na(.))) %>% 
+  gather(search_engine, result, Bing, DuckDuck, Google, Yahoo) %>% 
+  group_by(search_engine, keyword_length) %>% 
+  summarise(result_perc = mean(result)) %>% 
+  filter(search_engine != "Google") %>% 
   
-  ggplot(aes(monthly_search_volume_level, y = result_perc, colour = search_engine,
+  ggplot(aes(keyword_length, y = result_perc, colour = search_engine,
              group = search_engine)) +
   geom_line() +
-  geom_point()
+  geom_point() +
+  scale_y_continuous(labels = scales::label_percent()) +
+  labs(title = str_wrap("Search Engine Accuracy by Keyword Length", 50),
+       subtitle = "Top 10",
+       colour = "Search Engine", 
+       x = "Keyword Length in Words",
+       y = "Search Engine Accuracy")
 ```
 
 
 
-Can get
+
+```{r}
+
+# Domin level accurcy
+
+# Very different results when I look at domain. Overall way more accurate but the trend by search volume doesn't hold.
+# search_results %>% 
+#   filter(type == "organic",
+#          rank_group == 1,
+#          search_engine == "Google") %>% 
+#   distinct(keyword_id, .keep_all = T) %>% 
+#   mutate(monthly_search_volume_level = fct_relevel(monthly_search_volume_level,
+#                                                    "500-1000",
+#                                                    "1000-10000",
+#                                                    "10000-100000")) %>% 
+#   select(keyword, keyword_id, domain, monthly_search_volume_level) %>% 
+# 
+#   
+#   left_join(
+#     search_results %>% 
+#       filter(type == "organic") %>% 
+#       filter(rank_group <= 3) %>% 
+#       select(search_engine, keyword_id, rank_group, rank_absolute, domain),
+#     by = c("keyword_id", "domain")
+#   ) %>% 
+#   arrange(rank_group) %>% 
+#   distinct(keyword_id, search_engine, domain, .keep_all = T) %>% 
+#   select(-rank_absolute) %>% 
+#   spread(search_engine, rank_group) %>% 
+#   mutate_at(vars(Bing, DuckDuck, Google, Yahoo), funs(!is.na(.))) %>% 
+#   gather(search_engine, result, Bing, DuckDuck, Google, Yahoo) %>% 
+#   group_by(search_engine, monthly_search_volume_level) %>% 
+#   summarise(result_perc = mean(result)) %>% 
+#   filter(search_engine != "Google") %>% 
+#   
+#   ggplot(aes(monthly_search_volume_level, y = result_perc, colour = search_engine,
+#              group = search_engine)) +
+#   geom_line() +
+#   geom_point()
+```
+
+
+
+```{r}
+# search_results %>% 
+#   filter(type == "organic",
+#          rank_group == 1,
+#          search_engine == "Google") %>% 
+#   distinct(keyword_id, .keep_all = T) %>% 
+#   mutate(keyword_length = case_when(
+#     nchar(keyword) <= 8 ~ 8,
+#     nchar(keyword) >= 28 ~ 28,
+#     TRUE ~ nchar(keyword) * 1
+#   )) %>% 
+#   mutate(monthly_search_volume_level = fct_relevel(monthly_search_volume_level,
+#                                                    "500-1000",
+#                                                    "1000-10000",
+#                                                    "10000-100000")) %>% 
+#   select(keyword, keyword_id, domain, keyword_length) %>% 
+# 
+#   
+#   left_join(
+#     search_results %>% 
+#       filter(type == "organic") %>% 
+#       filter(rank_group <= 30) %>% 
+#       select(search_engine, keyword_id, rank_group, rank_absolute, domain),
+#     by = c("keyword_id", "domain")
+#   ) %>% 
+#   arrange(rank_group) %>% 
+#   distinct(keyword_id, search_engine, domain, .keep_all = T) %>% 
+#   select(-rank_absolute) %>% 
+#   spread(search_engine, rank_group) %>% 
+#   mutate_at(vars(Bing, DuckDuck, Google, Yahoo), funs(!is.na(.))) %>% 
+#   gather(search_engine, result, Bing, DuckDuck, Google, Yahoo) %>% 
+#   group_by(search_engine, keyword_length) %>% 
+#   summarise(result_perc = mean(result)) %>% 
+#   filter(search_engine != "Google") %>% 
+#   
+#   ggplot(aes(keyword_length, y = result_perc, colour = search_engine,
+#              group = search_engine)) +
+#   geom_line() +
+#   geom_point()
+```
