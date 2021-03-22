@@ -62,6 +62,29 @@ We analysed 60k search results from each search engine and came up with some int
 
 4. The number of words in the search term is negatively correlated with accuracy. Search terms with _just_ one word are ~8% more accurate than those with multiple words
 
+# Research questions (to do)
+
+1. Bing and DuckDuck are more accurate (~75%) than Yahoo (66%) when compared to Google [DONE]
+  - Top 10 is more frequently used to look at search results [TO-DO]
+
+2. The higher the search volume the more accurate the search result [DONE]
+
+3. The accuracy of the search engines differs by category. Real Estate, Travel & Tourism, and Retailers & General Merchandise are more accurate across all search engines. While Apparel, Beauty & Personal Care, and Home & Garden are less accurate. These trends are similar across all search engines but there are specific categories like Health where Yahoo is particularly less accurate. [DONE]
+  - Split categories into further sub levels (if we have sufficient data) [To-DO]
+  - Split categories by search volume) [To-DO]
+  
+4. The longer the keyword used in the search the more accurate the result. This could be because the longer the keyword, the more specific the search query. [DONE]
+  - Look into # of words
+
+5. How similar are the rankings between search engines? E.g. is Google’s top 10 exactly the same as DuckDuck
+
+6. For results that produce a lot of the same domain, what is their accuracy? e.g. results that return lots of amazon links. We could look at domain accuracy in general as well
+
+7. What is the average distance to Google #1 search result?
+
+8. What can we learn from the description or titles? To brainstorm
+
+See here an example example articles we did in the past  to get an idea for the end result and the type of findings we´re looking for: https://backlinko.com/google-ctr-stats; https://backlinko.com/page-speed-stats
 
 
 
