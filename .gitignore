@@ -49,3 +49,4 @@ raw_data/download_from_gdrive
 
 # large files
 proc_data/search_results.rds
+proc_data/search_results_light.rds
