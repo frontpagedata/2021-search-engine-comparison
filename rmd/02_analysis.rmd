@@ -110,8 +110,8 @@ See here an example example articles we did in the past  to get an idea for the 
 ```{r load_and_setup, echo = T}
 library(tidyverse) # package used for data wrangling
 # options(dplyr.summarise.inform = F)
-theme_set(theme_minimal() +
-            theme(plot.title = element_text(size = 15)))
+theme_set(theme_minimal(base_size = 12, base_family = "Poppins"))
+
 # "datasets_for_report.Rdata" is built by the following commented calls
 # source(here::here("scripts/01_build_light_dataset.R"))
 # source(here::here("scripts/02_build_datasets_for_report.R"))
@@ -150,22 +150,55 @@ considering the top 10, 20 or 30 results.
 
 We see an improvement for volumes over 10K searches per month.
 
-```{r, echo = T}
-accuracy_by_se_and_vol %>% 
+```{r plot_search_volume_accuracy, include = FALSE}
+se_labels <- 
+  accuracy_by_se_and_vol %>% 
+  filter(monthly_search_volume_level == "10000-100000", grp == "top 10") %>% 
+  mutate(
+    monthly_search_volume_level = factor(monthly_search_volume_level, labels = "10k-1m"),
+    
+  )
+
+p <- 
+  accuracy_by_se_and_vol %>% 
+  mutate(
+    monthly_search_volume_level = factor(monthly_search_volume_level, labels = c("0.5k-1k", "1k-10k", "10k-1m"))
+  ) %>% 
   ggplot(aes(monthly_search_volume_level, y = accuracy, colour = search_engine,
              group = search_engine)) +
   geom_line() +
-  geom_point() +
-  scale_y_continuous(labels = scales::label_percent()) +
-  labs(title = str_wrap("Search Engine Accuracy by Keyword's Monthly Search Volume", 50),
-       subtitle = "Top 10",
-       colour = "Search Engine", 
+  geom_point(aes(fill = search_engine), shape = 21, size = 4, color = "white", stroke = 0.6) +
+  ggrepel::geom_text_repel(data = se_labels, aes(label = search_engine), nudge_y = 0.01, size = 3, hjust = 0, fontface = "bold", family = "Poppins") +
+  scale_y_continuous(limits = c(0.5, 0.8), breaks = seq(0.5, 0.8, 0.1), labels = scales::label_percent(accuracy = 1), expand = expansion(0)) +
+  scale_x_discrete(expand = expansion(0.05)) +
+  scale_color_manual(values = c("#f25f5c", "#70c1b3", "#247ba0")) +
+  scale_fill_manual(values = c("#f25f5c", "#70c1b3", "#247ba0")) +
+  labs(title = "Search Engine Accuracy by Keyword's Monthly Search Volume",
        x = "Monthly Search Volume",
        y = "Search Engine Accuracy") +
-  facet_wrap(vars(grp), ncol = 3)
+  facet_wrap(~grp, ncol = 3, labeller = labeller(grp = str_to_title)) +
+  coord_cartesian(clip = "off") +
+  theme(
+    plot.title.position = "plot",
+    plot.title = element_text(face = "bold", margin = margin(b = 10)),
+    plot.margin = margin(10, 20, 10, 20),
+    plot.background = element_rect(fill = "#D3D2F9", color = NA),
+    legend.position = "none",
+    axis.title.x.bottom = element_text(color = "grey60", size = rel(0.7), hjust = 1, margin = margin(t = 5), face = "bold"),
+    axis.title.y.left = element_text(color = "grey60", size = rel(0.7), hjust = 1, margin = margin(r = 5), face = "bold"),
+    axis.text = element_text(size = rel(0.75)),
+    strip.background = element_rect(fill = "#807FFF", color = "white", size = 1.5),
+    strip.text = element_text(color = "white", face = "bold"),
+    panel.grid.minor = element_blank(),
+    panel.spacing.x = unit(2.5, "lines"),
+    panel.spacing.y = unit(2.5, "lines")
+  ) 
+
+ragg::agg_png(here::here("plots", "plot_01_search_vol_accuracy.png"), width = 9, height = 5, units = "in", res = 320)
+print(p)
+dev.off()
 ```
-
-
+![](../plots/plot_01_search_vol_accuracy.png)
 
 ## Keyword categories
 
