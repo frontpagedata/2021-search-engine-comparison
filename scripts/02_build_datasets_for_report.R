@@ -1,3 +1,5 @@
+# search_results_light <- readRDS(here::here("proc_data/search_results_light.rds"))
+# keywords <- readRDS(here::here("proc_data/keywords.rds"))
 
 product_services <- read_rds(here::here("proc_data/dim_category.rds"))
 
@@ -15,6 +17,52 @@ monthly_search_volume <-
   count(monthly_search_volume_level) %>% 
   rename(Count = n) %>% 
   mutate(Count = scales::comma(Count))
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# top domains
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+top_domains_0 <-
+  search_results_light %>%
+  filter(rank_group == 1) %>%
+  count(search_engine, domain,sort = TRUE) %>%
+  group_by(search_engine) %>%
+  mutate(pct = n / sum(n)) %>%
+  ungroup()
+
+top_google_domains <-
+  top_domains_0 %>%
+  filter(search_engine == "Google") %>%
+  arrange(-n) %>%
+  head(10) %>%
+  pull(domain)
+
+top_domains <-
+  top_domains_0 %>%
+  filter(domain %in% top_google_domains) %>%
+  mutate(domain = factor(domain, top_google_domains),
+         search_engine = factor(search_engine, c("Google", "DuckDuck","Bing", "Yahoo")))
+
+top_domains_10_0 <-
+  search_results_light %>%
+  filter(rank_group <= 10) %>%
+  count(search_engine, domain,sort = TRUE) %>%
+  group_by(search_engine) %>%
+  mutate(pct = n / sum(n)) %>%
+  ungroup()
+
+top_google_domains_10 <-
+  top_domains_10_0 %>%
+  filter(search_engine == "Google") %>%
+  arrange(-n) %>%
+  head(10) %>%
+  pull(domain)
+
+top_domains_10 <-
+  top_domains_10_0 %>%
+  filter(domain %in% top_google_domains) %>%
+  mutate(domain = factor(domain, top_google_domains),
+         search_engine = factor(search_engine, c("Google", "DuckDuck","Bing", "Yahoo")))
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # domain specificity
@@ -42,11 +90,13 @@ domain_specificity_by_kw <-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # reusable first step, at keyword x search_engine level
-accuracy_0 <- 
+accuracy_10_0 <- 
   search_results_light %>%
   filter(rank_group <= 10) %>%
   group_by(keyword_id) %>%
-  mutate(google_url_1 = url[search_engine == "Google" & rank_group == 1]) %>%
+  mutate(google_url_1 = url[search_engine == "Google" & rank_group == 1],
+         google_domain_1 = domain[search_engine == "Google" & rank_group == 1]
+         ) %>%
   ungroup() %>%
   filter(search_engine != "Google") %>%
   left_join(domain_specificity_by_kw, by = "keyword_id") %>%
@@ -61,10 +111,35 @@ accuracy_0 <-
            domain_specificity_grouped    # unique by keyword_id
            ) %>%
   summarize(found = any(url == google_url_1),
+            domain = google_domain_1[1],
             .groups = "drop")
 
+accuracy_20_0 <- 
+  search_results_light %>%
+  filter(rank_group <= 20) %>%
+  group_by(keyword_id) %>%
+  mutate(google_url_1 = url[search_engine == "Google" & rank_group == 1]) %>%
+  ungroup() %>%
+  filter(search_engine != "Google") %>%
+  group_by(keyword_id, search_engine, monthly_search_volume_level) %>%
+  summarize(found = any(url == google_url_1),
+            .groups = "drop")
+
+accuracy_30_0 <- 
+  search_results_light %>%
+  filter(rank_group <= 30) %>%
+  group_by(keyword_id) %>%
+  mutate(google_url_1 = url[search_engine == "Google" & rank_group == 1]) %>%
+  ungroup() %>%
+  filter(search_engine != "Google") %>%
+  group_by(keyword_id, search_engine, monthly_search_volume_level) %>%
+  summarize(found = any(url == google_url_1),
+            .groups = "drop")
+
+# accuracy at search engine level
+
 accuracy_by_se_10 <-
-  accuracy_0 %>% 
+  accuracy_10_0 %>% 
   group_by(search_engine) %>% 
   summarize(
     accuracy_top_10 = mean(found), 
@@ -73,15 +148,7 @@ accuracy_by_se_10 <-
   arrange(desc(accuracy_top_10))
 
 accuracy_by_se_20 <- 
-  search_results_light %>%
-  filter(rank_group <= 20) %>%
-  group_by(keyword_id) %>%
-  mutate(google_url_1 = url[search_engine == "Google" & rank_group == 1]) %>%
-  ungroup() %>%
-  filter(search_engine != "Google") %>%
-  group_by(keyword_id, search_engine) %>%
-  summarize(found = any(url == google_url_1),
-            .groups = "drop") %>% 
+  accuracy_20_0 %>% 
   group_by(search_engine) %>% 
   summarize(
     accuracy_top_20 = mean(found), 
@@ -89,20 +156,14 @@ accuracy_by_se_20 <-
   arrange(desc(accuracy_top_20))
 
 accuracy_by_se_30 <- 
-  search_results_light %>%
-  filter(rank_group <= 30) %>%
-  group_by(keyword_id) %>%
-  mutate(google_url_1 = url[search_engine == "Google" & rank_group == 1]) %>%
-  ungroup() %>%
-  filter(search_engine != "Google") %>%
-  group_by(keyword_id, search_engine) %>%
-  summarize(found = any(url == google_url_1),
-            .groups = "drop") %>% 
+  accuracy_30_0 %>% 
   group_by(search_engine) %>% 
   summarize(
     accuracy_top_30 = mean(found), 
     .groups = "drop")  %>% 
   arrange(desc(accuracy_top_30))
+
+# combine all 3 in single table
 
 accuracy_by_se <-
   accuracy_by_se_10 %>%
@@ -111,17 +172,41 @@ accuracy_by_se <-
   select(search_engine, accuracy_top_10, accuracy_top_20, accuracy_top_30, n_keywords)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# compute accuracy_top_30 by search engine and volume
+# compute accuracy by search engine and volume
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-accuracy_by_se_and_vol <-
-  accuracy_0 %>% 
+accuracy_by_se_and_vol_10 <-
+  accuracy_10_0 %>% 
   group_by(search_engine, monthly_search_volume_level) %>% 
   summarize(
     accuracy = mean(found), 
     n = n(),
     .groups = "drop")  %>% 
-  arrange(desc(accuracy))
+  mutate(grp = "top 10")
+
+accuracy_by_se_and_vol_20 <-
+  accuracy_20_0 %>% 
+  group_by(search_engine, monthly_search_volume_level) %>% 
+  summarize(
+    accuracy = mean(found), 
+    n = n(),
+    .groups = "drop")   %>% 
+  mutate(grp = "top 20")
+
+accuracy_by_se_and_vol_30 <-
+  accuracy_30_0 %>% 
+  group_by(search_engine, monthly_search_volume_level) %>% 
+  summarize(
+    accuracy = mean(found), 
+    n = n(),
+    .groups = "drop")  %>% 
+  mutate(grp = "top 30")
+
+accuracy_by_se_and_vol <-
+  bind_rows(
+    accuracy_by_se_and_vol_10, 
+    accuracy_by_se_and_vol_20, 
+    accuracy_by_se_and_vol_30)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # category counts
@@ -172,7 +257,7 @@ category3_counts <-
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# compute accuracy by search category 1
+# compute accuracy by search and category 1
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 product_services_for_join_1 <- 
@@ -181,7 +266,7 @@ product_services_for_join_1 <-
   select(criterion_id, keyword_category = category_level_1)
 
 accuracy_by_se_and_category_0 <-
-  accuracy_0 %>%
+  accuracy_10_0 %>%
   mutate(
     keyword_info_categories = str_remove_all(keyword_info_categories, "\\[|\\]"),
   ) %>%
@@ -193,6 +278,41 @@ accuracy_by_se_and_category_0 <-
     by = c("keyword_info_categories" = "criterion_id")
   )
 
+set.seed(1)
+real_estate_examples_small_volume <-
+  search_results_light %>%
+  # keep only rank 1
+  filter(rank_group == 1, monthly_search_volume_level == "500-1000") %>%
+  group_by(keyword_id) %>%
+  mutate(keep = length(unique(url)) == 1) %>%
+  ungroup() %>%
+  filter(keep)  %>%
+  separate_rows(keyword_info_categories, sep = ",") %>%
+  inner_join(
+    product_services_for_join_1, 
+    by = c("keyword_info_categories" = "criterion_id")
+  ) %>%
+  filter(keyword_category == "Real Estate") %>%
+  distinct(keyword, domain, url) %>%
+  slice_sample(n = 5)
+
+real_estate_examples_medium_volume <-
+  search_results_light %>%
+  # keep only rank 1
+  filter(rank_group == 1, monthly_search_volume_level == "1000-10000") %>%
+  group_by(keyword_id) %>%
+  mutate(keep = length(unique(url)) == 1) %>%
+  ungroup() %>%
+  filter(keep)  %>%
+  separate_rows(keyword_info_categories, sep = ",") %>%
+  inner_join(
+    product_services_for_join_1, 
+    by = c("keyword_info_categories" = "criterion_id")
+  ) %>%
+  filter(keyword_category == "Real Estate") %>%
+  distinct(keyword, domain, url) %>%
+  slice_sample(n = 5)
+  
 accuracy_by_se_and_category <-
   accuracy_by_se_and_category_0  %>% 
   group_by(search_engine, keyword_category) %>% 
@@ -205,7 +325,7 @@ accuracy_by_se_and_category <-
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# compute accuracy by search category 2 and 3
+# compute accuracy by search and category 2 and 3
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 product_services_for_join_2 <- 
@@ -219,7 +339,7 @@ product_services_for_join_3 <-
   select(criterion_id, keyword_category = category_level_3)
 
 accuracy_by_se_and_category_2 <-
-  accuracy_0 %>%
+  accuracy_10_0 %>%
   mutate(
     keyword_info_categories = str_remove_all(keyword_info_categories, "\\[|\\]"),
   ) %>%
@@ -240,7 +360,7 @@ accuracy_by_se_and_category_2 <-
   head(30)
 
 accuracy_by_se_and_category_3 <-
-  accuracy_0 %>%
+  accuracy_10_0 %>%
   mutate(
     keyword_info_categories = str_remove_all(keyword_info_categories, "\\[|\\]"),
   ) %>%
@@ -281,13 +401,12 @@ accuracy_by_se_category_and_vol <-
   
 kw_length_counts <- 
   keywords %>% 
-  mutate(keyword_length = nchar(keyword),
-         keyword_length = str_count(keyword, " ") + 1) %>% 
+  mutate(keyword_length = str_count(keyword, " ") + 1) %>% 
   # filter(keyword_length == 1)
   count(keyword_length)
 
 accuracy_by_se_and_kw_length <-
-  accuracy_0 %>% 
+  accuracy_10_0 %>% 
   group_by(search_engine, keyword_length) %>% 
   summarize(
     accuracy = mean(found), 
@@ -305,12 +424,36 @@ accuracy_by_se_vol_and_kw_length <-
  # mutate(monthly_search_volume_level = monthly_search_volume_level)) %>%
   arrange(desc(accuracy))
 
+set.seed(1)
+
+kw_examples_0 <-
+  search_results_light %>%
+  # keep only rank 1
+  filter(rank_group == 1) %>%
+  group_by(keyword_id) %>%
+  mutate(keep = length(unique(url)) == 1) %>%
+  ungroup() %>%
+  filter(keep)  %>%
+  mutate(keyword_length = str_count(keyword, " ") + 1)
+
+short_kw_examples <-
+  kw_examples_0 %>%
+  filter(keyword_length == 1) %>%
+  distinct(keyword, domain, url) %>%
+  slice_sample(n = 5)
+
+long_kw_examples <-
+  kw_examples_0 %>%
+  filter(keyword_length >= 5) %>%
+  distinct(keyword, domain, url) %>%
+  slice_sample(n = 5)
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # compute accuracy by search engine and domain specificity
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 accuracy_by_se_and_spec <-
-  accuracy_0 %>% 
+  accuracy_10_0 %>% 
   group_by(search_engine, domain_specificity_grouped) %>% 
   summarize(
     accuracy = mean(found), 
@@ -325,17 +468,18 @@ accuracy_by_se_and_spec <-
 # we check how much of the top 10 for each search engine is in google's top 10
 
 similarity_to_google <-
-    search_results_light %>%
-      filter(rank_group <= 10) %>%
-      group_by(keyword) %>%
-      mutate(google_urls = list(url[search_engine == "Google"])) %>%
-      ungroup() %>%
-      group_by(keyword, search_engine) %>%
-      summarize(similarity = mean(url %in% google_urls[[1]]), .groups = "drop") %>%
-      group_by(search_engine) %>%
-      summarize(similarity = mean(similarity), .groups = "drop") %>%
-      mutate(search_engine2  = "Google")
-
+  search_results_light %>%
+  filter(rank_group <= 10) %>%
+  group_by(keyword) %>%
+  mutate(google_urls = list(url[search_engine == "Google"])) %>%
+  ungroup() %>%
+  group_by(keyword, search_engine) %>%
+  summarize(similarity = mean(url %in% google_urls[[1]]), .groups = "drop") %>%
+  group_by(search_engine) %>%
+  summarize(similarity = mean(similarity), .groups = "drop") %>%
+  mutate(search_engine2  = "Google") %>%
+  filter(search_engine != "Google")
+  
 similarity_to_duckduck <-
   search_results_light %>%
   filter(rank_group <= 10) %>%
@@ -346,7 +490,8 @@ similarity_to_duckduck <-
   summarize(similarity = mean(url %in% google_urls[[1]]), .groups = "drop") %>%
   group_by(search_engine) %>%
   summarize(similarity = mean(similarity), .groups = "drop") %>%
-  mutate(search_engine2  = "DuckDuck")
+  mutate(search_engine2  = "DuckDuck") %>%
+  filter(! search_engine %in% c("Google", "DuckDuck"))
 
 similarity_to_bing <-
   search_results_light %>%
@@ -358,27 +503,66 @@ similarity_to_bing <-
   summarize(similarity = mean(url %in% google_urls[[1]]), .groups = "drop") %>%
   group_by(search_engine) %>%
   summarize(similarity = mean(similarity), .groups = "drop") %>%
-  mutate(search_engine2  = "Bing")
+  mutate(search_engine2  = "Bing") %>%
+  filter(! search_engine %in% c("Google", "DuckDuck", "Bing"))
 
-similarity_to_yahoo <-
+similarity <- bind_rows(
+  similarity_to_google,
+  similarity_to_duckduck,
+  similarity_to_bing
+) %>%
+  mutate(descr = paste(search_engine, "and", search_engine2),
+         descr = fct_reorder(descr, search_engine2 != "Google"))
+
+# repeat exercise with top 3
+
+similarity_to_google_3 <-
   search_results_light %>%
-  filter(rank_group <= 10) %>%
+  filter(rank_group <= 3) %>%
   group_by(keyword) %>%
-  mutate(google_urls = list(url[search_engine == "Yahoo"])) %>%
+  mutate(google_urls = list(url[search_engine == "Google"])) %>%
   ungroup() %>%
   group_by(keyword, search_engine) %>%
   summarize(similarity = mean(url %in% google_urls[[1]]), .groups = "drop") %>%
   group_by(search_engine) %>%
   summarize(similarity = mean(similarity), .groups = "drop") %>%
-  mutate(search_engine2  = "Yahoo")
+  mutate(search_engine2  = "Google") %>%
+  filter(search_engine != "Google")
 
-similarity <- bind_rows(
-  similarity_to_google,
-  similarity_to_duckduck,
-  similarity_to_bing,
-  similarity_to_yahoo
+similarity_to_duckduck_3 <-
+  search_results_light %>%
+  filter(rank_group <= 3) %>%
+  group_by(keyword) %>%
+  mutate(google_urls = list(url[search_engine == "DuckDuck"])) %>%
+  ungroup() %>%
+  group_by(keyword, search_engine) %>%
+  summarize(similarity = mean(url %in% google_urls[[1]]), .groups = "drop") %>%
+  group_by(search_engine) %>%
+  summarize(similarity = mean(similarity), .groups = "drop") %>%
+  mutate(search_engine2  = "DuckDuck") %>%
+  filter(! search_engine %in% c("Google", "DuckDuck"))
+
+similarity_to_bing_3 <-
+  search_results_light %>%
+  filter(rank_group <= 3) %>%
+  group_by(keyword) %>%
+  mutate(google_urls = list(url[search_engine == "Bing"])) %>%
+  ungroup() %>%
+  group_by(keyword, search_engine) %>%
+  summarize(similarity = mean(url %in% google_urls[[1]]), .groups = "drop") %>%
+  group_by(search_engine) %>%
+  summarize(similarity = mean(similarity), .groups = "drop") %>%
+  mutate(search_engine2  = "Bing") %>%
+  filter(! search_engine %in% c("Google", "DuckDuck", "Bing"))
+
+similarity_3 <- bind_rows(
+  similarity_to_google_3,
+  similarity_to_duckduck_3,
+  similarity_to_bing_3
 ) %>%
-  spread(search_engine2, similarity)
+  mutate(descr = paste(search_engine, "and", search_engine2),
+         descr = fct_reorder(descr, search_engine2 != "Google"))
+  
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # compute position of 1st google url
@@ -406,6 +590,25 @@ median_google1_positions <-
   group_by(search_engine) %>%
   summarise(median = median(google1_position), .groups = "drop")
 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# domain extension
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+accuracy_by_se_and_domain_ext <-
+  accuracy_10_0 %>% 
+  mutate(ext = gsub("^.*(\\.[^.]+)$", "\\1", domain)) %>%
+  group_by(search_engine, ext) %>% 
+  summarize(
+    accuracy = mean(found), 
+    n = n(),
+    .groups = "drop") %>%
+  arrange(desc(n)) %>%
+  head(30) %>%
+  mutate(ext = fct_reorder(ext, -accuracy)) 
+
+
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # saving all workspace
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -413,21 +616,29 @@ median_google1_positions <-
 save(
   file = here::here("proc_data/datasets_for_report.Rdata"),
   monthly_search_volume,
+  top_domains,
+  top_domains_10,
   accuracy_by_se,
   accuracy_by_se_and_vol,
   category1_counts,
   category2_counts,
   category3_counts,
   accuracy_by_se_and_category,
+  real_estate_examples_small_volume,
+  real_estate_examples_medium_volume,
   accuracy_by_se_and_category_2,
   accuracy_by_se_and_category_3,
   accuracy_by_se_category_and_vol,
   kw_length_counts,
   accuracy_by_se_and_kw_length,
   accuracy_by_se_vol_and_kw_length ,
+  short_kw_examples,
+  long_kw_examples,
   accuracy_by_se_and_spec,
   similarity,
+  similarity_3,
   domain_specificity_by_kw,
   google1_positions,
-  median_google1_positions
+  median_google1_positions,
+  accuracy_by_se_and_domain_ext
 )

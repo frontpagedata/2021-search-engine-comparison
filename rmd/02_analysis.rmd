@@ -6,8 +6,11 @@ output:
     theme: paper
     highlight: kate
     code_folding: hide
+    toc: true
     toc_depth: 3
-    toc_float: true
+    toc_float: 
+      collapsed: false
+    number_sections: true
 ---
 <style>
 .list-group-item.active, .list-group-item.active:hover, .list-group-item.active:focus {
@@ -63,31 +66,44 @@ volume, with gains between 1.5% and 2% when comparing volume of more and less th
 
 3. The accuracy of the search engines differs by category. Real Estate, Travel & Tourism, and Retailers & General Merchandise are more accurate across _all_ search engines. While Apparel, Beauty & Personal Care, and Home & Garden are less accurate.
 
-4. The number of words in the search term is negatively correlated with accuracy. Search terms with _just_ one word are ~8% more accurate than those with multiple words
+4. Accuracy is better for single word searches and for long searches.
 
-# Research questions (to do)
+5. The top results of Googles's competitors are much more similar between themselves than similar to Google's.
+
+6. The different search engines feature in different amounts big domains such as amazon in their top result.
+
+7. Searches that tend to yield results predominantly linking to a specific domain (domain specific), OR non
+domain specific at all, show higher accuracy on average.
+
+8. In more than half of the cases in any search engine, google's top result is
+   found in position 1 to 3.
+   
+9. Accuracy varies on average depending on the domain extension of google's top
+result.
+
+# Research questions
 
 1. Bing and DuckDuck are more accurate (~75%) than Yahoo (66%) when compared to Google [DONE]
-  - Top 10 is more frequently used to look at search results [TO-DO]
+  - Top 10 is more frequently used to look at search results [DONE]
 
 2. The higher the search volume the more accurate the search result [DONE]
 
 3. The accuracy of the search engines differs by category. Real Estate, Travel & Tourism, and Retailers & General Merchandise are more accurate across all search engines. While Apparel, Beauty & Personal Care, and Home & Garden are less accurate. These trends are similar across all search engines but there are specific categories like Health where Yahoo is particularly less accurate. [DONE]
-  - Split categories into further sub levels (if we have sufficient data) [To-DO]
-  - Split categories by search volume) [To-DO]
+  - Split categories into further sub levels (if we have sufficient data) [DONE]
+  - Split categories by search volume) [DONE]
   
 4. The longer the keyword used in the search the more accurate the result. This could be because the longer the keyword, the more specific the search query. [DONE]
   - Look into # of words
 
-5. How similar are the rankings between search engines? E.g. is Google’s top 10 exactly the same as DuckDuck
+5. How similar are the rankings between search engines? E.g. is Google’s top 10 exactly the same as DuckDuck [DONE]
 
-6. For results that produce a lot of the same domain, what is their accuracy? e.g. results that return lots of amazon links. We could look at domain accuracy in general as well
+6. For results that produce a lot of the same domain, what is their accuracy? e.g. results that return lots of amazon links. We could look at domain accuracy in general as well [DONE]
 
-7. What is the average distance to Google #1 search result?
+7. What is the average distance to Google #1 search result? [DONE]
 
-8. What can we learn from the description or titles? To brainstorm
+8. What can we learn from the description or titles? To brainstorm [TO DO ?]
 
-See here an example example articles we did in the past  to get an idea for the end result and the type of findings we´re looking for: https://backlinko.com/google-ctr-stats; https://backlinko.com/page-speed-stats
+See here an example example articles we did in the past  to get an idea for the end result and the type of findings we´re looking for: https://backlinko.com/Google-ctr-stats; https://backlinko.com/page-speed-stats
 
 
 
@@ -102,6 +118,7 @@ theme_set(theme_minimal() +
 load(here::here("proc_data/datasets_for_report.Rdata"))
 ```
 
+# Analysis
 
 ## How accurate are the other search engines?
 
@@ -109,8 +126,7 @@ We developed an accuracy measure that counts how many times a search engines res
 
 If the search engine contained Google's #1 result for all of their keywords their accuracy would be 100%. While if they did not, their accuracy would be 0%.
 
-We show below the accuracy for each search engine using the top 10 (as we will
-in the rest of the report) as well as the top 20 and top 30 results.
+We show below the accuracy for each search engine using the top 10  as well as the top 20 and top 30 results.
 
 We see that Yahoo is fairly behind both competitors and DuckDuckGo has a slight edge over Bing.
 
@@ -119,7 +135,9 @@ We see that Yahoo is fairly behind both competitors and DuckDuckGo has a slight 
 accuracy_by_se
 ```
 
-### Monthly search volume
+For the rest of the report, unless stated otherwise, accuracy is computed by considering the top 10 results only.
+
+## Monthly search volume
 
 The sample of 60k search keywords were chosen so we got a fairly even split across different search volumes. 
 
@@ -127,8 +145,10 @@ The sample of 60k search keywords were chosen so we got a fairly even split acro
 monthly_search_volume
 ```
 
-This means we're able to determine how search volume may affect the accuracy of the search engines. 
-The effect is mild but we see an improvement for volumes over 10K searches per month.
+We show below how search volume affects the accuracy of the search engines,
+considering the top 10, 20 or 30 results.
+
+We see an improvement for volumes over 10K searches per month.
 
 ```{r, echo = T}
 accuracy_by_se_and_vol %>% 
@@ -141,12 +161,13 @@ accuracy_by_se_and_vol %>%
        subtitle = "Top 10",
        colour = "Search Engine", 
        x = "Monthly Search Volume",
-       y = "Search Engine Accuracy")
+       y = "Search Engine Accuracy") +
+  facet_wrap(vars(grp), ncol = 3)
 ```
 
 
 
-### Keyword categories
+## Keyword categories
 
 Each of the keywords comes with categories (or tags). It's possible for keywords to belong to more than one category. The sample of 60k keywords was drawn randomly so we don't expect to have an equal amount in each category. 
 
@@ -190,7 +211,7 @@ category3_counts %>%
   
 ```
 
-The following chart shows that there is significant variance in accuracy depending on what category the keyword belongs too. Real Estate, Travel & Tourism, Retailers & General Merchandise, and Dining & Nightlife are the four most accurate categories across all the search engines (between 67% and 75%). While Home & Garden, Apparel, and Beauty & Personal Care are least accurate (between 55% and 61%).
+The following chart shows that there is significant variance in accuracy depending on what category the keyword belongs too. Real Estate, Travel & Tourism, Retailers & General Merchandise, and Dining & Nightlife are the four most accurate categories across all the search engines (between 67% and 75%). While Home & Garden and Apparel are least accurate (between 55% and 61%).
 
 Yahoo is also particularly less accurate in a couple of categories. For example, in Health Yahoo is 60% accurate (vs ~67% for the other two search engines). Similarly for Food & Groceries, and Beauty & Personal Care.
 
@@ -258,7 +279,17 @@ accuracy_by_se_category_and_vol %>%
        y = "Search Engine Accuracy")
 ```
 
-### Number of words
+Below we show, both for small and medium volume (resp. 500-1000 and 1000-10000),
+5 examples of Real Estate keywords for which we found the same url on the top 
+for every search engine.
+
+```{r}
+real_estate_examples_small_volume[c("keyword", "url")]
+
+real_estate_examples_medium_volume[c("keyword", "url")]
+```
+
+## Number of words
 
 Most keywords (search terms) have between 2 and 4 words. 
 There are also 29 search terms that have at least 10 words. 
@@ -313,35 +344,123 @@ accuracy_by_se_vol_and_kw_length %>%
   geom_point() +
   scale_y_continuous(labels = scales::label_percent()) +
   labs(title = str_wrap("Search Engine Accuracy by Keyword Length", 50),
-       subtitle = "Top 10",
+       subtitle = "Top 10 - breakdown by volume level",
        colour = "Search Engine", 
        x = "Keyword Length in Words",
        y = "Search Engine Accuracy") +
   facet_wrap(vars(monthly_search_volume_level), ncol=3)
 ```
 
-### How similar are the rankings between search engines?
+Below we show, both for single word searches and long searches,
+5 examples for which we found the same url on the top 
+for every search engine.
 
-We define similarity as the fraction of the top 10 for a each search engine that
-we find in another's top 10.
+We see that the single word searches are either technical words, linking to
+wikipedia definitions, or brand names , linking to their official webpage.
 
-We see that Yahoo and Google seem to work the most differently while Yahoo and
-Bing are the most similar.
+Long searches are more specific, for instance one long search links to a blog
+article titled almost like the search, the 
+format "best pizza in san diego little italy" is taylored for yelp and all the
+search engines agree easily on the result to put at the top.
 
 ```{r}
-similarity
+short_kw_examples
+long_kw_examples
 ```
 
-### Domain specificity
+
+## How similar are the rankings between search engines?
+
+We define similarity between two search engines as the fraction of results (identified by url) that
+we find in both top 10 results of the pair.
+
+We see below that on average 71% of top 10 results on yahoo can be also found in the top 10 of Bing,
+making them the most similar pair.
+
+Google is very dissimilar to other search engines, especially Yahoo, its shares only
+29% of top 10 results wit the latter.
+
+```{r}
+similarity %>%
+  ggplot() +
+  aes(descr, similarity, fill = search_engine2 == "Google") %>%
+  geom_col() + 
+  theme(legend.position = "none", axis.text.x = element_text(angle = 30)) +
+  labs(title = "Similarity between top 10 results of search engine pairs",
+       x = NULL,
+       y = "Average similarity") +
+  scale_y_continuous(labels = scales::label_percent()) 
+```
+
+We show below the same chart but this time considering only the similarity between
+top 3. We see overall that top3 results are more similar than top 10 results.
+It makes sense as the higher we are on the page the less random should be the results,
+and those should converge between search engines.
+
+```{r}
+similarity_3 %>%
+  ggplot() +
+  aes(descr, similarity, fill = search_engine2 == "Google") %>%
+  geom_col() + 
+  theme(legend.position = "none", axis.text.x = element_text(angle = 30)) +
+  labs(title = "Similarity between top 3 results of search engine pairs",
+       x = NULL,
+       y = "Average similarity") +
+  scale_y_continuous(labels = scales::label_percent()) 
+```
+
+## Top domains
+
+We take a look at the top 10 domains featured in 1st position of Google searches
+and see for which proportion of keyword they come up on top.
+
+We see that search engines vary sensibly in which domain they put on top.
+
+* Wikipedia is huge for all engines, but is featured significantly more by
+  Google and Yahoo
+* Amazon is less featured by Google than by its competitors.
+* Trip Advisor is twice more featured by Google than its competitors
+* weather.com is more than twice more featured by competitors
+
+```{r}
+top_domains %>%
+  ggplot(aes(domain, pct, fill = search_engine)) +
+  geom_col(position = "dodge") + 
+  theme(axis.text.x = element_text(angle = 30)) +
+  labs(title = "Prevalence of big domains in searches",
+       x = "domain",
+       y = "share of presence in top spot") +
+  scale_y_continuous(labels = scales::label_percent()) 
+```
+
+We reproduce the analysis considering the whole top 10 results rather than only
+the top result.
+
+* We lose the wikipedia bias for Google when we look at the full top 10
+* homedepot.com is featured 3 times more by Google in its top 10.
+
+```{r}
+top_domains_10 %>%
+  ggplot(aes(domain, pct, fill = search_engine)) +
+  geom_col(position = "dodge") + 
+  theme(axis.text.x = element_text(angle = 30)) +
+  labs(title = "Prevalence of big domains in searches",
+       x = "domain",
+       y = "share of presence in top spot") +
+  scale_y_continuous(labels = scales::label_percent()) 
+```
+
+## Domain specificity
 
 We define the domain specificity of a keyword as the number of top 10 Google results 
 that feature the dominant domain of this top 10. For instance a research that returns
-3 ebay results, 5 amazon results, and 2 other results will have a domain specificity of 5.
+3 ebay results, 5 amazon results, and 2 other results, would be dominated by amazon, 
+so would be considered "amazon specific", and would be attributed a domain specificity of 5.
 
 We observe a U shape curve here too, searches that are very domain specific, or not at all,
 show the most accuracy. It might be that moderate domain specificity is a symptom
-of an unclear search, while very high product specificity shows that the search
-was more precise.
+of an unclear search, while very high domain specificity shows that the search
+was more targetted.
 
 ```{r}
 
@@ -365,29 +484,59 @@ accuracy_by_se_and_spec %>%
        y = "Search Engine Accuracy")
 ```
 
-### At what position is Google's first result ?
+## At what position is Google's first result ?
 
-The most likely position of the first google result is 1st, fr every search engine,
-a situation that we find for 35% of keywords. 
+We take a look at the position at which we find the first Google result in the results
+of the competitors.
+
+The most likely position of the first Google result is 1st. For every search engine,
+around 35% of keywords will have Google's first result on top. 
+
+For every search engine, in 12% of the cases, the the first Google result is found in second position.
+
 The second most likely position is that it's not found at all in the top 30.
 
-The median position of the first google result is 3 for all 3 google competitors.
+A fair amount of google first results are not found at all by other search engines,
+at least not in the top 30, so we cannot compute a mean position, but we see
+that for every other search engine,  we find google's top results in the top 3 
+more than half of the time.
+
 
 ```{r}
 google1_positions %>%
-  ggplot(aes(factor(google1_position), pct, fill = search_engine )) +
+  mutate(google1_position = factor(google1_position, c(1:30, NA), c(1:30, "not found"), exclude = NULL)) %>%
+  ggplot(aes(google1_position, pct, fill = search_engine )) +
   geom_col(position = "dodge") +
   scale_y_continuous(labels = scales::label_percent()) +
-  labs(title = "position of first google result",
+  labs(title = "Distribution of position of top Google result among rankings of other search engines",
       x = "position",
-      y = "amount (%)")
+      y = "amount (%)") +
+  theme(axis.text.x = element_text(angle = 30))
 ```
 
 ```{r}
-# computing the mean position is not possible because a fair amount of google
+# computing the mean position is not possible because a fair amount of Google
 # first urls are just not found, so the mean is undefined, we can compute the 
 # median position however, by assuming unfound is Inf
 median_google1_positions
 ```
 
+
+## How does accuracy vary with domain extension
+
+We look at the domain extension of the domain of google's first search and
+observe how it affects accuracy.
+
+We see that accuracy is much better when google's top result points to a ".info" or
+".org" website than when it points to a ".uk" or ".ca" website.
+
+```{r}
+accuracy_by_se_and_domain_ext %>%
+  ggplot(aes(ext, accuracy, fill = search_engine)) +
+  geom_col(position = "dodge") +
+  labs(title = "Accuracy by search engine and domain extension", 
+       subtitle = "Based on most common domain extensions in Google's top results",
+       x = "domain extension",
+       y = "accuracy")
+```
 
