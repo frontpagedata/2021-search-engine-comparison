@@ -30,6 +30,7 @@ domain_specificity_by_kw <-
 
 monthly_search_volume <-
   keywords %>% 
+  filter(keyword %in% unique(search_results_light$keyword)) %>%
   mutate(monthly_search_volume_level = fct_relevel(
     monthly_search_volume_level,
     "500-1000",
@@ -81,8 +82,77 @@ top_google_domains_10 <-
 
 top_domains_10 <-
   top_domains_10_0 %>%
-  filter(domain %in% top_google_domains) %>%
-  mutate(domain = factor(domain, top_google_domains),
+  filter(domain %in% top_google_domains_10) %>%
+  mutate(domain = factor(domain, top_google_domains_10),
+         search_engine = factor(search_engine, c("Google", "DuckDuck","Bing", "Yahoo")))
+
+# 3
+
+top_domains_3_0 <-
+  search_results_light %>%
+  filter(rank_group <= 3) %>%
+  count(search_engine, domain,sort = TRUE) %>%
+  group_by(search_engine) %>%
+  mutate(pct = n / sum(n)) %>%
+  ungroup()
+
+top_google_domains_3 <-
+  top_domains_3_0 %>%
+  filter(search_engine == "Google") %>%
+  arrange(-n) %>%
+  head(10) %>%
+  pull(domain)
+
+top_domains_3 <-
+  top_domains_3_0 %>%
+  filter(domain %in% top_google_domains_3) %>%
+  mutate(domain = factor(domain, top_google_domains_3),
+         search_engine = factor(search_engine, c("Google", "DuckDuck","Bing", "Yahoo")))
+
+# 20
+
+top_domains_20_0 <-
+  search_results_light %>%
+  filter(rank_group <= 20) %>%
+  count(search_engine, domain,sort = TRUE) %>%
+  group_by(search_engine) %>%
+  mutate(pct = n / sum(n)) %>%
+  ungroup()
+
+top_google_domains_20 <-
+  top_domains_20_0 %>%
+  filter(search_engine == "Google") %>%
+  arrange(-n) %>%
+  head(10) %>%
+  pull(domain)
+
+top_domains_20 <-
+  top_domains_20_0 %>%
+  filter(domain %in% top_google_domains_20) %>%
+  mutate(domain = factor(domain, top_google_domains_20),
+         search_engine = factor(search_engine, c("Google", "DuckDuck","Bing", "Yahoo")))
+
+# 30
+
+top_domains_30_0 <-
+  search_results_light %>%
+  filter(rank_group <= 30) %>%
+  count(search_engine, domain,sort = TRUE) %>%
+  group_by(search_engine) %>%
+  mutate(pct = n / sum(n)) %>%
+  ungroup()
+
+top_google_domains_30 <-
+  top_domains_30_0 %>%
+  filter(search_engine == "Google") %>%
+  arrange(-n) %>%
+  head(10) %>%
+  pull(domain)
+
+top_domains_30 <-
+  top_domains_30_0 %>%
+  filter(domain %in% top_google_domains_30) %>%
+  mutate(domain = factor(domain, top_google_domains_30),
          search_engine = factor(search_engine, c("Google", "DuckDuck","Bing", "Yahoo")))
 
 
@@ -216,6 +286,7 @@ accuracy_by_se_and_vol <-
 
 keywords_for_category_counts <-
   keywords %>%
+  filter(keyword %in% unique(search_results_light$keyword)) %>%
   mutate(keyword_info_categories = str_remove_all(keyword_info_categories,
                                                   "\\[") %>% 
            str_remove_all("\\]")) %>% 
@@ -403,8 +474,8 @@ accuracy_by_se_category_and_vol <-
   
 kw_length_counts <- 
   keywords %>% 
+  filter(keyword %in% unique(search_results_light$keyword)) %>%
   mutate(keyword_length = str_count(keyword, " ") + 1) %>% 
-  # filter(keyword_length == 1)
   count(keyword_length)
 
 accuracy_by_se_and_kw_length <-
@@ -463,7 +534,6 @@ accuracy_by_se_and_spec <-
     .groups = "drop")  %>% 
   arrange(desc(accuracy))
   
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # compute position of 1st google url
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

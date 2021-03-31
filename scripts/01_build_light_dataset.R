@@ -135,22 +135,28 @@ search_results_light <-
 print(dim(search_results_light)) # [1] 6520886      11
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# remove keywords for which we don't find rank_group from 1 to 10 for
+# remove keywords for which we don't find rank_group from 1 to 30 for
 # every search engine
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 search_results_light <-
   search_results_light %>%
   group_by(keyword_id, search_engine) %>%
-  mutate(n = sum(1:10 %in% rank_group)) %>%
+  # number of provided ranks in the top 30 for each keyword SE pair
+  mutate(n = sum(1:30 %in% rank_group)) %>%
   ungroup()  %>%
   group_by(keyword_id) %>%
-  mutate(incomplete = any(n!=10)) %>%
+  # an incomplete keyword is one that doesn't provide 30 top 30 result for any SE
+  mutate(incomplete = any(n!=30)) %>%
   ungroup() %>%
+  # keep only complete
   filter(!incomplete) %>%
-  select(-n, -incomplete)
+  select(-n, -incomplete) %>% 
+  # remove unused results
+  filter(rank_group <= 30)
 
-print(dim(search_results_light)) # [1] 6324619      11
+print(dim(search_results_light)) # [1] 694680     11 
+# previously # [1] 6324619      11
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # remove keywords for which we don't find all 4 search engines
@@ -171,6 +177,7 @@ search_results_light <-
   filter(n == 4) %>%
   select(-n)
 
-print(dim(search_results_light)) # [1] 6324619      11
+print(dim(search_results_light)) # [1] 694680     11 
+# previously # [1] 6324619      11
 
 write_rds(search_results_light, here::here("proc_data/search_results_light.rds"))
