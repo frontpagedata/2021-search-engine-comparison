@@ -115,27 +115,121 @@ theme_set(theme_minimal() +
 # "datasets_for_report.Rdata" is built by the following commented calls
 # source(here::here("scripts/01_build_light_dataset.R"))
 # source(here::here("scripts/02_build_datasets_for_report.R"))
+# source(here::here("scripts/03_similarity_metrics.R"))
 load(here::here("proc_data/datasets_for_report.Rdata"))
 ```
 
 # Analysis
 
-## How accurate are the other search engines?
+## How similar are the rankings between search engines?
 
-We developed an accuracy measure that counts how many times a search engines results contains Google's #1 result in their top 10. 
+We define similarity between two search engines as the fraction of results (identified by url) that
+we find in both top 10 results of the pair.
 
-If the search engine contained Google's #1 result for all of their keywords their accuracy would be 100%. While if they did not, their accuracy would be 0%.
+We see below that on average 71% of top 10 results on yahoo can be also found in the top 10 of Bing,
+making them the most similar pair.
 
-We show below the accuracy for each search engine using the top 10  as well as the top 20 and top 30 results.
+Google is very dissimilar to other search engines, especially Yahoo, its shares only
+29% of top 10 results wit the latter.
 
-We see that Yahoo is fairly behind both competitors and DuckDuckGo has a slight edge over Bing.
-
-
-```{r, echo = T}
-accuracy_by_se
+```{r}
+similarity_by_se_10 %>%
+  ggplot() +
+  aes(descr, similarity, fill = search_engine2 == "Google") %>%
+  geom_col() + 
+  theme(legend.position = "none", axis.text.x = element_text(angle = 30)) +
+  labs(title = "Similarity between top 10 results of search engine pairs",
+       x = NULL,
+       y = "Average similarity") +
+  scale_y_continuous(labels = scales::label_percent()) 
 ```
 
-For the rest of the report, unless stated otherwise, accuracy is computed by considering the top 10 results only.
+We show below the same chart but this time considering the similarity between
+top 3, top 20, and top 30.
+
+We see overall that top3 results are more similar than top 10 results.
+It makes sense as the higher we are on the page the less random should be the results,
+and those should converge between search engines.
+
+```{r}
+similarity_by_se_3 %>%
+  ggplot() +
+  aes(descr, similarity, fill = search_engine2 == "Google") %>%
+  geom_col() + 
+  theme(legend.position = "none", axis.text.x = element_text(angle = 30)) +
+  labs(title = "Similarity between top 3 results of search engine pairs",
+       x = NULL,
+       y = "Average similarity") +
+  scale_y_continuous(labels = scales::label_percent()) 
+
+similarity_by_se_20 %>%
+  ggplot() +
+  aes(descr, similarity, fill = search_engine2 == "Google") %>%
+  geom_col() + 
+  theme(legend.position = "none", axis.text.x = element_text(angle = 30)) +
+  labs(title = "Similarity between top 20 results of search engine pairs",
+       x = NULL,
+       y = "Average similarity") +
+  scale_y_continuous(labels = scales::label_percent()) 
+
+similarity_by_se_30 %>%
+  ggplot() +
+  aes(descr, similarity, fill = search_engine2 == "Google") %>%
+  geom_col() + 
+  theme(legend.position = "none", axis.text.x = element_text(angle = 30)) +
+  labs(title = "Similarity between top 30 results of search engine pairs",
+       x = NULL,
+       y = "Average similarity") +
+  scale_y_continuous(labels = scales::label_percent()) 
+```
+
+<!-- ## How accurate are the other search engines? -->
+
+<!-- We developed an accuracy measure that counts how many times a search engines results contains Google's #1 result in their top 10.  -->
+
+<!-- If the search engine contained Google's #1 result in its top 10 for all of their keywords their accuracy would be 100%. While if they did not, their accuracy would be 0%. -->
+
+<!-- We show below the accuracy for each search engine using the top 10 as well as the top 20 and top 30 results. -->
+
+<!-- For DuckDuckGo for example, we see that for 67% of keywords Google's -->
+<!-- top result is included in DuckDuckGo's top 10, for 74% of keywords it's included in its top 30. -->
+
+<!-- We see that Yahoo is fairly behind both competitors and DuckDuckGo has a slight edge over Bing. -->
+
+
+<!-- ```{r, echo = T} -->
+<!-- accuracy_by_se -->
+<!-- ``` -->
+
+<!-- For the rest of the report, unless stated otherwise, accuracy is computed by considering the top 10 results only. -->
+
+<!-- ## Monthly search volume -->
+
+<!-- The sample of 60k search keywords were chosen so we got a fairly even split across different search volumes.  -->
+
+<!-- ```{r, echo = T} -->
+<!-- monthly_search_volume -->
+<!-- ``` -->
+
+<!-- We show below how search volume affects the accuracy of the search engines, -->
+<!-- considering the top 10, 20 or 30 results. -->
+
+<!-- We see an improvement for volumes over 10K searches per month. -->
+
+<!-- ```{r, echo = T} -->
+<!-- accuracy_by_se_and_vol %>%  -->
+<!--   ggplot(aes(monthly_search_volume_level, y = accuracy, colour = search_engine, -->
+<!--              group = search_engine)) + -->
+<!--   geom_line() + -->
+<!--   geom_point() + -->
+<!--   scale_y_continuous(labels = scales::label_percent()) + -->
+<!--   labs(title = str_wrap("Search Engine Accuracy by Keyword's Monthly Search Volume", 50), -->
+<!--        subtitle = "Top 10", -->
+<!--        colour = "Search Engine",  -->
+<!--        x = "Monthly Search Volume", -->
+<!--        y = "Search Engine Accuracy") + -->
+<!--   facet_wrap(vars(grp), ncol = 3) -->
+<!-- ``` -->
 
 ## Monthly search volume
 
@@ -145,25 +239,152 @@ The sample of 60k search keywords were chosen so we got a fairly even split acro
 monthly_search_volume
 ```
 
-We show below how search volume affects the accuracy of the search engines,
-considering the top 10, 20 or 30 results.
+We show below how search volume affects the similarity of a search engine's top 
+results to Google's top results, considering the top 10, top 20 or top 30.
 
-We see an improvement for volumes over 10K searches per month.
+Though the difference is slight, we see that top results are most similar to 
+Google for medium volumes  (1000-10000 searches per month), this is true for top 10,
+top 20 and top30 for all search engines. 
+
+For high volumes searches (10000-100000 searches per month) a search engine's
+rankings are usually less similar to Google's.
 
 ```{r, echo = T}
-accuracy_by_se_and_vol %>% 
-  ggplot(aes(monthly_search_volume_level, y = accuracy, colour = search_engine,
+similarity_by_se_and_vol %>% 
+  ggplot(aes(monthly_search_volume_level, y = similarity, colour = search_engine,
              group = search_engine)) +
   geom_line() +
   geom_point() +
   scale_y_continuous(labels = scales::label_percent()) +
-  labs(title = str_wrap("Search Engine Accuracy by Keyword's Monthly Search Volume", 50),
+  labs(title = str_wrap("Similarity to Google by Keyword's Monthly Search Volume", 50),
        subtitle = "Top 10",
        colour = "Search Engine", 
        x = "Monthly Search Volume",
        y = "Search Engine Accuracy") +
   facet_wrap(vars(grp), ncol = 3)
 ```
+
+<!-- ## Keyword categories -->
+
+<!-- Each of the keywords comes with categories (or tags). It's possible for keywords to belong to more than one category. The sample of 60k keywords was drawn randomly so we don't expect to have an equal amount in each category.  -->
+
+<!-- The most common categories are News, Media & Publications, Arts & Entertainment, Business & Industrial, and Hobbies & Leisure. -->
+
+<!-- ```{r, echo = T} -->
+<!-- category1_counts %>%  -->
+<!--   ggplot(aes(x = keyword_category, y = n)) + -->
+<!--   geom_col() + -->
+<!--   coord_flip() + -->
+<!--   scale_y_continuous(labels = scales::label_comma()) + -->
+
+<!--   labs(title = "# of Keywords by Category", -->
+<!--        x = "Keyword Category", -->
+<!--        y = NULL) -->
+<!-- ``` -->
+
+<!-- Deeper levels of categories are available, nested into the main categories, -->
+<!-- we show below the breakdown of the level 2 and 3 categories. -->
+
+<!-- ```{r, echo = T} -->
+<!-- category2_counts %>%  -->
+<!--   ggplot(aes(x = keyword_category, y = n)) + -->
+<!--   geom_col() + -->
+<!--   coord_flip() + -->
+<!--   scale_y_continuous(labels = scales::label_comma()) + -->
+
+<!--   labs(title = "# of Keywords by Category (level 2)", -->
+<!--        x = "Keyword Category", -->
+<!--        y = NULL) -->
+
+<!-- category3_counts %>%  -->
+<!--   ggplot(aes(x = keyword_category, y = n)) + -->
+<!--   geom_col() + -->
+<!--   coord_flip() + -->
+<!--   scale_y_continuous(labels = scales::label_comma()) + -->
+
+<!--   labs(title = "# of Keywords by Category (level 3)", -->
+<!--        x = "Keyword Category", -->
+<!--        y = NULL) -->
+
+<!-- ``` -->
+
+<!-- The following chart shows that there is significant variance in accuracy depending on what category the keyword belongs too. Real Estate, Travel & Tourism, Retailers & General Merchandise, and Dining & Nightlife are the four most accurate categories across all the search engines (between 67% and 75%). While Home & Garden and Apparel are least accurate (between 55% and 61%). -->
+
+<!-- Yahoo is also particularly less accurate in a couple of categories. For example, in Health Yahoo is 60% accurate (vs ~67% for the other two search engines). Similarly for Food & Groceries, and Beauty & Personal Care. -->
+
+<!-- ```{r, echo = T} -->
+<!-- accuracy_by_se_and_category %>% -->
+<!--   ggplot(aes(x = keyword_category, y = accuracy, -->
+<!--              group = search_engine, colour = search_engine)) + -->
+<!--   geom_point() + -->
+<!--   coord_flip() + -->
+<!--   scale_y_continuous(labels = scales::label_percent()) + -->
+<!--   labs(title = str_wrap("Search Engine Accuracy by Keyword Category", 30), -->
+<!--        # subtitle = "Top 10", -->
+<!--        colour = "Search Engine",  -->
+<!--        x = "Keyword Category", -->
+<!--        y = "Search Engine Accuracy") -->
+<!-- ``` -->
+
+<!-- We reproduce this chart for the 10 biggest subcategories of level 2 and 3. -->
+
+<!-- ```{r, echo = T} -->
+<!-- accuracy_by_se_and_category_2 %>% -->
+<!--   ggplot(aes(x = keyword_category, y = accuracy, -->
+<!--              group = search_engine, colour = search_engine)) + -->
+<!--   geom_point() + -->
+<!--   coord_flip() + -->
+<!--   scale_y_continuous(labels = scales::label_percent()) + -->
+<!--   labs(title = str_wrap("Search Engine Accuracy by Keyword Category (level 2)", 30), -->
+<!--        subtitle = "Top 10", -->
+<!--        colour = "Search Engine",  -->
+<!--        x = "Keyword Category", -->
+<!--        y = "Search Engine Accuracy") -->
+
+<!-- accuracy_by_se_and_category_3 %>% -->
+<!--   ggplot(aes(x = keyword_category, y = accuracy, -->
+<!--              group = search_engine, colour = search_engine)) + -->
+<!--   geom_point() + -->
+<!--   coord_flip() + -->
+<!--   scale_y_continuous(labels = scales::label_percent()) + -->
+<!--   labs(title = str_wrap("Search Engine Accuracy by Keyword Category (level 3)", 30), -->
+<!--        subtitle = "Top 10", -->
+<!--        colour = "Search Engine",  -->
+<!--        x = "Keyword Category", -->
+<!--        y = "Search Engine Accuracy") -->
+<!-- ``` -->
+
+<!-- Finally we offer a breakdown of the accuracy by main category and volume category. -->
+
+<!-- We see that volume can make a big difference in some cases, for instance for -->
+<!-- Health related keywords Bing and DuckDuck become much more accurate as volume increases. -->
+
+<!-- We see also that Real Estate related searches give the most accurate results accross categories at lower volume. -->
+
+<!-- ```{r, echo = T} -->
+<!-- accuracy_by_se_category_and_vol %>% -->
+<!--   ggplot(aes(x = keyword_category, y = accuracy, -->
+<!--              group = search_engine, colour = search_engine)) + -->
+<!--   geom_point() + -->
+<!--   coord_flip() + -->
+<!--   facet_wrap(vars(monthly_search_volume_level)) + -->
+<!--   scale_y_continuous(labels = scales::label_percent()) + -->
+<!--   labs(title = str_wrap("Search Engine Accuracy by Keyword Category", 30), -->
+<!--        subtitle = "Top 10", -->
+<!--        colour = "Search Engine",  -->
+<!--        x = "Keyword Category", -->
+<!--        y = "Search Engine Accuracy") -->
+<!-- ``` -->
+
+<!-- Below we show, both for small and medium volume (resp. 500-1000 and 1000-10000), -->
+<!-- 5 examples of Real Estate keywords for which we found the same url on the top  -->
+<!-- for every search engine. -->
+
+<!-- ```{r} -->
+<!-- real_estate_examples_small_volume[c("keyword", "url")] -->
+
+<!-- real_estate_examples_medium_volume[c("keyword", "url")] -->
+<!-- ``` -->
 
 
 
@@ -211,50 +432,54 @@ category3_counts %>%
   
 ```
 
-The following chart shows that there is significant variance in accuracy depending on what category the keyword belongs too. Real Estate, Travel & Tourism, Retailers & General Merchandise, and Dining & Nightlife are the four most accurate categories across all the search engines (between 67% and 75%). While Home & Garden and Apparel are least accurate (between 55% and 61%).
+The following chart shows that there is significant variance in similarity depending on what category the keyword belongs too. Real Estate and Travel & Tourism are the categories where the top 10 between
+Google and other search engines is the most similar, while Apparel, Beauty and Personal Care and
+Internet & Telecom are the categories showing the most dissimilar top 10.
 
-Yahoo is also particularly less accurate in a couple of categories. For example, in Health Yahoo is 60% accurate (vs ~67% for the other two search engines). Similarly for Food & Groceries, and Beauty & Personal Care.
+For every category Yahoo is the most dissimilar to Google and DuckDuckGo the most similar,
+and the difference in similarity between those goes up to about 3.5 % for some categories
+such as Health and Apparel.
 
 ```{r, echo = T}
-accuracy_by_se_and_category %>%
-  ggplot(aes(x = keyword_category, y = accuracy,
+similarity_by_se_and_category %>%
+  ggplot(aes(x = keyword_category, y = similarity,
              group = search_engine, colour = search_engine)) +
   geom_point() +
   coord_flip() +
   scale_y_continuous(labels = scales::label_percent()) +
-  labs(title = str_wrap("Search Engine Accuracy by Keyword Category", 30),
+  labs(title = str_wrap("Search Engine similarity to Google by Keyword Category", 30),
        # subtitle = "Top 10",
        colour = "Search Engine", 
        x = "Keyword Category",
-       y = "Search Engine Accuracy")
+       y = "Search Engine Similarity")
 ```
 
 We reproduce this chart for the 10 biggest subcategories of level 2 and 3.
 
 ```{r, echo = T}
-accuracy_by_se_and_category_2 %>%
-  ggplot(aes(x = keyword_category, y = accuracy,
+similarity_by_se_and_category_2 %>%
+  ggplot(aes(x = keyword_category, y = similarity,
              group = search_engine, colour = search_engine)) +
   geom_point() +
   coord_flip() +
   scale_y_continuous(labels = scales::label_percent()) +
-  labs(title = str_wrap("Search Engine Accuracy by Keyword Category (level 2)", 30),
+  labs(title = str_wrap("Search Engine similarity to Google by Keyword Category (level 2)", 30),
        subtitle = "Top 10",
        colour = "Search Engine", 
        x = "Keyword Category",
-       y = "Search Engine Accuracy")
+       y = "Search Engine Similarity")
 
-accuracy_by_se_and_category_3 %>%
-  ggplot(aes(x = keyword_category, y = accuracy,
+similarity_by_se_and_category_3 %>%
+  ggplot(aes(x = keyword_category, y = similarity,
              group = search_engine, colour = search_engine)) +
   geom_point() +
   coord_flip() +
   scale_y_continuous(labels = scales::label_percent()) +
-  labs(title = str_wrap("Search Engine Accuracy by Keyword Category (level 3)", 30),
+  labs(title = str_wrap("Search Engine similarity to Google by Keyword Category (level 3)", 30),
        subtitle = "Top 10",
        colour = "Search Engine", 
        x = "Keyword Category",
-       y = "Search Engine Accuracy")
+       y = "Search Engine Similarity")
 ```
 
 Finally we offer a breakdown of the accuracy by main category and volume category.
@@ -262,21 +487,21 @@ Finally we offer a breakdown of the accuracy by main category and volume categor
 We see that volume can make a big difference in some cases, for instance for
 Health related keywords Bing and DuckDuck become much more accurate as volume increases.
 
-We see also that Real Estate related searches give the most accurate results accross categories at lower volume.
+We see also that Real Estate related searches yield the rankings most similar to
+google compared to other categories at low and medium volume, butnot at high volume.
 
 ```{r, echo = T}
-accuracy_by_se_category_and_vol %>%
-  ggplot(aes(x = keyword_category, y = accuracy,
+similarity_by_se_category_and_vol %>%
+  ggplot(aes(x = keyword_category, y = similarity,
              group = search_engine, colour = search_engine)) +
   geom_point() +
   coord_flip() +
   facet_wrap(vars(monthly_search_volume_level)) +
   scale_y_continuous(labels = scales::label_percent()) +
-  labs(title = str_wrap("Search Engine Accuracy by Keyword Category", 30),
-       subtitle = "Top 10",
+  labs(title = str_wrap("Search Engine Similarity to Google by Keyword Category", 30),
        colour = "Search Engine", 
        x = "Keyword Category",
-       y = "Search Engine Accuracy")
+       y = "Search Engine Similarity")
 ```
 
 Below we show, both for small and medium volume (resp. 500-1000 and 1000-10000),
@@ -288,6 +513,85 @@ real_estate_examples_small_volume[c("keyword", "url")]
 
 real_estate_examples_medium_volume[c("keyword", "url")]
 ```
+
+<!-- ## Number of words -->
+
+<!-- Most keywords (search terms) have between 2 and 4 words.  -->
+<!-- There are also 29 search terms that have at least 10 words.  -->
+<!-- For example `what are the first ten amendments to the constitution called` and  -->
+<!-- `how long does it take to become a pediatric nurse`. -->
+
+<!-- ```{r, echo = T} -->
+<!-- kw_length_counts %>%  -->
+<!--   ggplot(aes(x = keyword_length, y = n)) + -->
+<!--   geom_col() + -->
+<!--   scale_x_continuous(breaks = seq(0, 10, 1)) + -->
+<!--   labs(title = "Keywords by # of Words", -->
+<!--        y = "# of Keywords", -->
+<!--        x = "# of Words in Keyword") + -->
+<!--   scale_y_continuous(labels = scales::label_comma()) -->
+<!-- ``` -->
+
+<!-- For all three search engines, the search terms with only one word are the most -->
+<!-- accurate, but we observe a "U" shape curve as longer keywords show more accurate  -->
+<!-- results than medium length ones.  -->
+
+<!-- On average accuracy for length 1 keywords is about 5% higher than for length 2, -->
+<!-- and this difference is bigger for high volumes. -->
+
+<!-- There might be two forces at play here, on one hand single word searches are more straightforward, -->
+<!-- so we can expect search engines to converge more on them, and on the other hand -->
+<!-- long keywords are more precise, so the pool of potential targets decreases with -->
+<!-- the length of the search and long searches tend to converge over search engines too. -->
+
+<!-- Searching for a brand name for instance, we expect to find the official website  -->
+<!-- on the first result on all search engines, and searching for a blog article by typing -->
+<!-- its full title we expect all search engines to propose it first as well. -->
+
+
+<!-- ```{r, echo = T} -->
+<!-- accuracy_by_se_and_kw_length %>% -->
+<!--   ggplot(aes(keyword_length, y = accuracy, colour = search_engine, -->
+<!--              group = search_engine)) + -->
+<!--   geom_line() + -->
+<!--   geom_point() + -->
+<!--   scale_y_continuous(labels = scales::label_percent()) + -->
+<!--   labs(title = str_wrap("Search Engine Accuracy by Keyword Length", 50), -->
+<!--        subtitle = "Top 10", -->
+<!--        colour = "Search Engine",  -->
+<!--        x = "Keyword Length in Words", -->
+<!--        y = "Search Engine Accuracy") -->
+
+<!-- accuracy_by_se_vol_and_kw_length %>% -->
+<!--   ggplot(aes(keyword_length, y = accuracy, colour = search_engine, -->
+<!--              group = search_engine)) + -->
+<!--   geom_line() + -->
+<!--   geom_point() + -->
+<!--   scale_y_continuous(labels = scales::label_percent()) + -->
+<!--   labs(title = str_wrap("Search Engine Accuracy by Keyword Length", 50), -->
+<!--        subtitle = "Top 10 - breakdown by volume level", -->
+<!--        colour = "Search Engine",  -->
+<!--        x = "Keyword Length in Words", -->
+<!--        y = "Search Engine Accuracy") + -->
+<!--   facet_wrap(vars(monthly_search_volume_level), ncol=3) -->
+<!-- ``` -->
+
+<!-- Below we show, both for single word searches and long searches, -->
+<!-- 5 examples for which we found the same url on the top  -->
+<!-- for every search engine. -->
+
+<!-- We see that the single word searches are either technical words, linking to -->
+<!-- wikipedia definitions, or brand names , linking to their official webpage. -->
+
+<!-- Long searches are more specific, for instance one long search links to a blog -->
+<!-- article titled almost like the search, the  -->
+<!-- format "best pizza in san diego little italy" is taylored for yelp and all the -->
+<!-- search engines agree easily on the result to put at the top. -->
+
+<!-- ```{r} -->
+<!-- short_kw_examples -->
+<!-- long_kw_examples -->
+<!-- ``` -->
 
 ## Number of words
 
@@ -307,47 +611,49 @@ kw_length_counts %>%
   scale_y_continuous(labels = scales::label_comma())
 ```
 
-For all three search engines, the search terms with only one word are the most
-accurate, but we observe a "U" shape curve as longer keywords show more accurate 
-results than medium length ones. 
+For all three search engines, the results get more similar to Google's on average
+as keywords get longer.
 
-On average accuracy for length 1 keywords is about 5% higher than for length 2,
-and this difference is bigger for high volumes.
+On average accuracy for length 1 we measure a similarity in the 28-30% range,
+while for keywords made of more than 5 terms we get an average similarity in the
+32-35% range).
 
-There might be two forces at play here, on one hand single word searches are more straightforward,
-so we can expect search engines to converge more on them, and on the other hand
-long keywords are more precise, so the pool of potential targets decreases with
+It might be that long keywords are more precise, so the pool of potential targets decreases with
 the length of the search and long searches tend to converge over search engines too.
-
-Searching for a brand name for instance, we expect to find the official website 
-on the first result on all search engines, and searching for a blog article by typing
-its full title we expect all search engines to propose it first as well.
 
 
 ```{r, echo = T}
-accuracy_by_se_and_kw_length %>%
-  ggplot(aes(keyword_length, y = accuracy, colour = search_engine,
+similarity_by_se_and_kw_length %>%
+  ggplot(aes(keyword_length, y = similarity, colour = search_engine,
              group = search_engine)) +
   geom_line() +
   geom_point() +
   scale_y_continuous(labels = scales::label_percent()) +
-  labs(title = str_wrap("Search Engine Accuracy by Keyword Length", 50),
+  labs(title = str_wrap("Search Engine Similarity to Google by Keyword Length", 50),
        subtitle = "Top 10",
        colour = "Search Engine", 
        x = "Keyword Length in Words",
-       y = "Search Engine Accuracy")
+       y = "Search Engine Similarity")
+```
 
-accuracy_by_se_vol_and_kw_length %>%
-  ggplot(aes(keyword_length, y = accuracy, colour = search_engine,
+Breaking it down by volume level, we observe the same tendency but with a stronger trend
+for smaller volume (generally smaller minima and higher maxima). It might be that for low volume searches, a high number of
+terms make the search very precise and given that the pool of results is restricted
+the rankings will tend to converge, while a short search for low volume keywords
+is not precise enough to converge over search engines.
+
+```{r, echo = T}
+similarity_by_se_vol_and_kw_length %>%
+  ggplot(aes(keyword_length, y = similarity, colour = search_engine,
              group = search_engine)) +
   geom_line() +
   geom_point() +
   scale_y_continuous(labels = scales::label_percent()) +
-  labs(title = str_wrap("Search Engine Accuracy by Keyword Length", 50),
+  labs(title = str_wrap("Search Engine similarity to Google by Keyword Length", 50),
        subtitle = "Top 10 - breakdown by volume level",
        colour = "Search Engine", 
        x = "Keyword Length in Words",
-       y = "Search Engine Accuracy") +
+       y = "Search Engine Similarity") +
   facet_wrap(vars(monthly_search_volume_level), ncol=3)
 ```
 
@@ -368,46 +674,6 @@ short_kw_examples
 long_kw_examples
 ```
 
-
-## How similar are the rankings between search engines?
-
-We define similarity between two search engines as the fraction of results (identified by url) that
-we find in both top 10 results of the pair.
-
-We see below that on average 71% of top 10 results on yahoo can be also found in the top 10 of Bing,
-making them the most similar pair.
-
-Google is very dissimilar to other search engines, especially Yahoo, its shares only
-29% of top 10 results wit the latter.
-
-```{r}
-similarity %>%
-  ggplot() +
-  aes(descr, similarity, fill = search_engine2 == "Google") %>%
-  geom_col() + 
-  theme(legend.position = "none", axis.text.x = element_text(angle = 30)) +
-  labs(title = "Similarity between top 10 results of search engine pairs",
-       x = NULL,
-       y = "Average similarity") +
-  scale_y_continuous(labels = scales::label_percent()) 
-```
-
-We show below the same chart but this time considering only the similarity between
-top 3. We see overall that top3 results are more similar than top 10 results.
-It makes sense as the higher we are on the page the less random should be the results,
-and those should converge between search engines.
-
-```{r}
-similarity_3 %>%
-  ggplot() +
-  aes(descr, similarity, fill = search_engine2 == "Google") %>%
-  geom_col() + 
-  theme(legend.position = "none", axis.text.x = element_text(angle = 30)) +
-  labs(title = "Similarity between top 3 results of search engine pairs",
-       x = NULL,
-       y = "Average similarity") +
-  scale_y_continuous(labels = scales::label_percent()) 
-```
 
 ## Top domains
 
@@ -450,6 +716,40 @@ top_domains_10 %>%
   scale_y_continuous(labels = scales::label_percent()) 
 ```
 
+<!-- ## Domain specificity -->
+
+<!-- We define the domain specificity of a keyword as the number of top 10 Google results  -->
+<!-- that feature the dominant domain of this top 10. For instance a research that returns -->
+<!-- 3 ebay results, 5 amazon results, and 2 other results, would be dominated by amazon,  -->
+<!-- so would be considered "amazon specific", and would be attributed a domain specificity of 5. -->
+
+<!-- We observe a U shape curve here too, searches that are very domain specific, or not at all, -->
+<!-- show the most accuracy. It might be that moderate domain specificity is a symptom -->
+<!-- of an unclear search, while very high domain specificity shows that the search -->
+<!-- was more targetted. -->
+
+<!-- ```{r} -->
+
+<!-- domain_specificity_by_kw %>% -->
+<!--   count(domain_specificity_grouped) %>% -->
+<!--   ggplot(aes(domain_specificity_grouped, n)) + -->
+<!--   geom_col() + -->
+<!--   geom_text(aes(label = n), nudge_y = 700) + -->
+<!--   ggtitle("breakdown of domain specificity in our sample")  -->
+
+<!-- accuracy_by_se_and_spec %>% -->
+<!--   ggplot(aes(domain_specificity_grouped, y = accuracy, colour = search_engine, -->
+<!--              group = search_engine)) + -->
+<!--   geom_line() + -->
+<!--   geom_point() + -->
+<!--   scale_y_continuous(labels = scales::label_percent()) + -->
+<!--   labs(title = str_wrap("Search Engine Accuracy by Domain Specificity", 50), -->
+<!--        subtitle = "Top 10", -->
+<!--        colour = "Search Engine",  -->
+<!--        x = "Domain specificity", -->
+<!--        y = "Search Engine Accuracy") -->
+<!-- ``` -->
+
 ## Domain specificity
 
 We define the domain specificity of a keyword as the number of top 10 Google results 
@@ -457,10 +757,7 @@ that feature the dominant domain of this top 10. For instance a research that re
 3 ebay results, 5 amazon results, and 2 other results, would be dominated by amazon, 
 so would be considered "amazon specific", and would be attributed a domain specificity of 5.
 
-We observe a U shape curve here too, searches that are very domain specific, or not at all,
-show the most accuracy. It might be that moderate domain specificity is a symptom
-of an unclear search, while very high domain specificity shows that the search
-was more targetted.
+For every search engine We observe that searches that are more domain specific tend to yield results less similar to Google's.
 
 ```{r}
 
@@ -471,18 +768,19 @@ domain_specificity_by_kw %>%
   geom_text(aes(label = n), nudge_y = 700) +
   ggtitle("breakdown of domain specificity in our sample") 
 
-accuracy_by_se_and_spec %>%
-  ggplot(aes(domain_specificity_grouped, y = accuracy, colour = search_engine,
+similarity_by_se_and_spec %>%
+  ggplot(aes(domain_specificity_grouped, y = similarity, colour = search_engine,
              group = search_engine)) +
   geom_line() +
   geom_point() +
   scale_y_continuous(labels = scales::label_percent()) +
-  labs(title = str_wrap("Search Engine Accuracy by Domain Specificity", 50),
+  labs(title = str_wrap("Search Engine Similarity to Google by Domain Specificity", 50),
        subtitle = "Top 10",
        colour = "Search Engine", 
        x = "Domain specificity",
-       y = "Search Engine Accuracy")
+       y = "Search Engine Similarity")
 ```
+
 
 ## At what position is Google's first result ?
 
@@ -522,21 +820,20 @@ median_google1_positions
 ```
 
 
-## How does accuracy vary with domain extension
+<!-- ## How does accuracy vary with domain extension -->
 
-We look at the domain extension of the domain of google's first search and
-observe how it affects accuracy.
+<!-- We look at the domain extension of the domain of google's first search and -->
+<!-- observe how it affects accuracy. -->
 
-We see that accuracy is much better when google's top result points to a ".info" or
-".org" website than when it points to a ".uk" or ".ca" website.
+<!-- We see that accuracy is much better when google's top result points to a ".info" or -->
+<!-- ".org" website than when it points to a ".uk" or ".ca" website. -->
 
-```{r}
-accuracy_by_se_and_domain_ext %>%
-  ggplot(aes(ext, accuracy, fill = search_engine)) +
-  geom_col(position = "dodge") +
-  labs(title = "Accuracy by search engine and domain extension", 
-       subtitle = "Based on most common domain extensions in Google's top results",
-       x = "domain extension",
-       y = "accuracy")
-```
-
+<!-- ```{r} -->
+<!-- accuracy_by_se_and_domain_ext %>% -->
+<!--   ggplot(aes(ext, accuracy, fill = search_engine)) + -->
+<!--   geom_col(position = "dodge") + -->
+<!--   labs(title = "Accuracy by search engine and domain extension",  -->
+<!--        subtitle = "Based on most common domain extensions in Google's top results", -->
+<!--        x = "domain extension", -->
+<!--        y = "accuracy") -->
+<!-- ``` -->S

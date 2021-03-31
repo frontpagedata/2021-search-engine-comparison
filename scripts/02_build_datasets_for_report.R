@@ -4,6 +4,27 @@
 product_services <- read_rds(here::here("proc_data/dim_category.rds"))
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# domain specificity
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# the domain specificity of a keyword is the number top 10 Google results 
+# that feature dominant domain of this top 10
+
+# we need to compute it early because it will be used in the next section
+
+domain_specificity_by_kw <- 
+  search_results_light %>%
+  filter(search_engine == "Google",
+         rank_group <= 10) %>%
+  group_by(keyword_id) %>%
+  summarize(domain_specificity = max(tabulate(factor(domain))), .groups = "drop") %>%
+  mutate(domain_specificity_grouped = case_when(
+    domain_specificity <= 4 ~ as.character(domain_specificity),
+    TRUE ~ "5+"
+  ))
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # monthly search volume
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -64,25 +85,6 @@ top_domains_10 <-
   mutate(domain = factor(domain, top_google_domains),
          search_engine = factor(search_engine, c("Google", "DuckDuck","Bing", "Yahoo")))
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# domain specificity
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# the domain specificity of a keyword is the number top 10 Google results 
-# that feature dominant domain of this top 10
-
-# we need to compute it early because it will be used in the next section
-
-domain_specificity_by_kw <- 
-  search_results_light %>%
-  filter(search_engine == "Google",
-         rank_group <= 10) %>%
-  group_by(keyword_id) %>%
-  summarize(domain_specificity = max(tabulate(factor(domain))), .groups = "drop") %>%
-  mutate(domain_specificity_grouped = case_when(
-    domain_specificity <= 4 ~ as.character(domain_specificity),
-    TRUE ~ "5+"
-  ))
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -460,108 +462,6 @@ accuracy_by_se_and_spec <-
     n = n(),
     .groups = "drop")  %>% 
   arrange(desc(accuracy))
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# compute ranking similarity
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# we check how much of the top 10 for each search engine is in google's top 10
-
-similarity_to_google <-
-  search_results_light %>%
-  filter(rank_group <= 10) %>%
-  group_by(keyword) %>%
-  mutate(google_urls = list(url[search_engine == "Google"])) %>%
-  ungroup() %>%
-  group_by(keyword, search_engine) %>%
-  summarize(similarity = mean(url %in% google_urls[[1]]), .groups = "drop") %>%
-  group_by(search_engine) %>%
-  summarize(similarity = mean(similarity), .groups = "drop") %>%
-  mutate(search_engine2  = "Google") %>%
-  filter(search_engine != "Google")
-  
-similarity_to_duckduck <-
-  search_results_light %>%
-  filter(rank_group <= 10) %>%
-  group_by(keyword) %>%
-  mutate(google_urls = list(url[search_engine == "DuckDuck"])) %>%
-  ungroup() %>%
-  group_by(keyword, search_engine) %>%
-  summarize(similarity = mean(url %in% google_urls[[1]]), .groups = "drop") %>%
-  group_by(search_engine) %>%
-  summarize(similarity = mean(similarity), .groups = "drop") %>%
-  mutate(search_engine2  = "DuckDuck") %>%
-  filter(! search_engine %in% c("Google", "DuckDuck"))
-
-similarity_to_bing <-
-  search_results_light %>%
-  filter(rank_group <= 10) %>%
-  group_by(keyword) %>%
-  mutate(google_urls = list(url[search_engine == "Bing"])) %>%
-  ungroup() %>%
-  group_by(keyword, search_engine) %>%
-  summarize(similarity = mean(url %in% google_urls[[1]]), .groups = "drop") %>%
-  group_by(search_engine) %>%
-  summarize(similarity = mean(similarity), .groups = "drop") %>%
-  mutate(search_engine2  = "Bing") %>%
-  filter(! search_engine %in% c("Google", "DuckDuck", "Bing"))
-
-similarity <- bind_rows(
-  similarity_to_google,
-  similarity_to_duckduck,
-  similarity_to_bing
-) %>%
-  mutate(descr = paste(search_engine, "and", search_engine2),
-         descr = fct_reorder(descr, search_engine2 != "Google"))
-
-# repeat exercise with top 3
-
-similarity_to_google_3 <-
-  search_results_light %>%
-  filter(rank_group <= 3) %>%
-  group_by(keyword) %>%
-  mutate(google_urls = list(url[search_engine == "Google"])) %>%
-  ungroup() %>%
-  group_by(keyword, search_engine) %>%
-  summarize(similarity = mean(url %in% google_urls[[1]]), .groups = "drop") %>%
-  group_by(search_engine) %>%
-  summarize(similarity = mean(similarity), .groups = "drop") %>%
-  mutate(search_engine2  = "Google") %>%
-  filter(search_engine != "Google")
-
-similarity_to_duckduck_3 <-
-  search_results_light %>%
-  filter(rank_group <= 3) %>%
-  group_by(keyword) %>%
-  mutate(google_urls = list(url[search_engine == "DuckDuck"])) %>%
-  ungroup() %>%
-  group_by(keyword, search_engine) %>%
-  summarize(similarity = mean(url %in% google_urls[[1]]), .groups = "drop") %>%
-  group_by(search_engine) %>%
-  summarize(similarity = mean(similarity), .groups = "drop") %>%
-  mutate(search_engine2  = "DuckDuck") %>%
-  filter(! search_engine %in% c("Google", "DuckDuck"))
-
-similarity_to_bing_3 <-
-  search_results_light %>%
-  filter(rank_group <= 3) %>%
-  group_by(keyword) %>%
-  mutate(google_urls = list(url[search_engine == "Bing"])) %>%
-  ungroup() %>%
-  group_by(keyword, search_engine) %>%
-  summarize(similarity = mean(url %in% google_urls[[1]]), .groups = "drop") %>%
-  group_by(search_engine) %>%
-  summarize(similarity = mean(similarity), .groups = "drop") %>%
-  mutate(search_engine2  = "Bing") %>%
-  filter(! search_engine %in% c("Google", "DuckDuck", "Bing"))
-
-similarity_3 <- bind_rows(
-  similarity_to_google_3,
-  similarity_to_duckduck_3,
-  similarity_to_bing_3
-) %>%
-  mutate(descr = paste(search_engine, "and", search_engine2),
-         descr = fct_reorder(descr, search_engine2 != "Google"))
   
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -606,39 +506,3 @@ accuracy_by_se_and_domain_ext <-
   arrange(desc(n)) %>%
   head(30) %>%
   mutate(ext = fct_reorder(ext, -accuracy)) 
-
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# saving all workspace
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-save(
-  file = here::here("proc_data/datasets_for_report.Rdata"),
-  monthly_search_volume,
-  top_domains,
-  top_domains_10,
-  accuracy_by_se,
-  accuracy_by_se_and_vol,
-  category1_counts,
-  category2_counts,
-  category3_counts,
-  accuracy_by_se_and_category,
-  real_estate_examples_small_volume,
-  real_estate_examples_medium_volume,
-  accuracy_by_se_and_category_2,
-  accuracy_by_se_and_category_3,
-  accuracy_by_se_category_and_vol,
-  kw_length_counts,
-  accuracy_by_se_and_kw_length,
-  accuracy_by_se_vol_and_kw_length ,
-  short_kw_examples,
-  long_kw_examples,
-  accuracy_by_se_and_spec,
-  similarity,
-  similarity_3,
-  domain_specificity_by_kw,
-  google1_positions,
-  median_google1_positions,
-  accuracy_by_se_and_domain_ext
-)
