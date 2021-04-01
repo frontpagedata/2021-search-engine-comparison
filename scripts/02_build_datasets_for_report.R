@@ -16,7 +16,7 @@ domain_specificity_by_kw <-
   search_results_light %>%
   filter(search_engine == "Google",
          rank_group <= 10) %>%
-  group_by(keyword_id) %>%
+  group_by(keyword) %>%
   summarize(domain_specificity = max(tabulate(factor(domain))), .groups = "drop") %>%
   mutate(domain_specificity_grouped = case_when(
     domain_specificity <= 4 ~ as.character(domain_specificity),
@@ -165,22 +165,22 @@ top_domains_30 <-
 accuracy_10_0 <- 
   search_results_light %>%
   filter(rank_group <= 10) %>%
-  group_by(keyword_id) %>%
+  group_by(keyword) %>%
   mutate(google_url_1 = url[search_engine == "Google" & rank_group == 1],
          google_domain_1 = domain[search_engine == "Google" & rank_group == 1]
          ) %>%
   ungroup() %>%
   filter(search_engine != "Google") %>%
-  left_join(domain_specificity_by_kw, by = "keyword_id") %>%
-  group_by(keyword_id, 
+  left_join(domain_specificity_by_kw, by = "keyword") %>%
+  group_by(keyword, 
            search_engine, 
-           monthly_search_volume_level,  # unique by keyword_id
-           keyword_info_categories,      # unique by keyword_id
-           keyword_length = case_when(   # unique by keyword_id
+           monthly_search_volume_level,  # unique by keyword
+           keyword_info_categories,      # unique by keyword
+           keyword_length = case_when(   # unique by keyword
              str_count(str_trim(keyword, "both"), " ") +1 >= 5 ~ "5+",
              TRUE ~ as.character(str_count(str_trim(keyword, "both"), " ") + 1)
            ),
-           domain_specificity_grouped    # unique by keyword_id
+           domain_specificity_grouped    # unique by keyword
            ) %>%
   summarize(found = any(url == google_url_1),
             domain = google_domain_1[1],
@@ -189,22 +189,22 @@ accuracy_10_0 <-
 accuracy_20_0 <- 
   search_results_light %>%
   filter(rank_group <= 20) %>%
-  group_by(keyword_id) %>%
+  group_by(keyword) %>%
   mutate(google_url_1 = url[search_engine == "Google" & rank_group == 1]) %>%
   ungroup() %>%
   filter(search_engine != "Google") %>%
-  group_by(keyword_id, search_engine, monthly_search_volume_level) %>%
+  group_by(keyword, search_engine, monthly_search_volume_level) %>%
   summarize(found = any(url == google_url_1),
             .groups = "drop")
 
 accuracy_30_0 <- 
   search_results_light %>%
   filter(rank_group <= 30) %>%
-  group_by(keyword_id) %>%
+  group_by(keyword) %>%
   mutate(google_url_1 = url[search_engine == "Google" & rank_group == 1]) %>%
   ungroup() %>%
   filter(search_engine != "Google") %>%
-  group_by(keyword_id, search_engine, monthly_search_volume_level) %>%
+  group_by(keyword, search_engine, monthly_search_volume_level) %>%
   summarize(found = any(url == google_url_1),
             .groups = "drop")
 
@@ -275,10 +275,7 @@ accuracy_by_se_and_vol_30 <-
   mutate(grp = "top 30")
 
 accuracy_by_se_and_vol <-
-  bind_rows(
-    accuracy_by_se_and_vol_10, 
-    accuracy_by_se_and_vol_20, 
-    accuracy_by_se_and_vol_30)
+  bind_rows 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # category counts
@@ -356,7 +353,7 @@ real_estate_examples_small_volume <-
   search_results_light %>%
   # keep only rank 1
   filter(rank_group == 1, monthly_search_volume_level == "500-1000") %>%
-  group_by(keyword_id) %>%
+  group_by(keyword) %>%
   mutate(keep = length(unique(url)) == 1) %>%
   ungroup() %>%
   filter(keep)  %>%
@@ -373,7 +370,7 @@ real_estate_examples_medium_volume <-
   search_results_light %>%
   # keep only rank 1
   filter(rank_group == 1, monthly_search_volume_level == "1000-10000") %>%
-  group_by(keyword_id) %>%
+  group_by(keyword) %>%
   mutate(keep = length(unique(url)) == 1) %>%
   ungroup() %>%
   filter(keep)  %>%
@@ -503,7 +500,7 @@ kw_examples_0 <-
   search_results_light %>%
   # keep only rank 1
   filter(rank_group == 1) %>%
-  group_by(keyword_id) %>%
+  group_by(keyword) %>%
   mutate(keep = length(unique(url)) == 1) %>%
   ungroup() %>%
   filter(keep)  %>%
@@ -540,10 +537,10 @@ accuracy_by_se_and_spec <-
 
 google1_positions_0 <- 
   search_results_light %>%
-  group_by(keyword_id) %>%
+  group_by(keyword) %>%
   mutate(google_url_1 = url[search_engine == "Google" & rank_group == 1]) %>%
   ungroup() %>%
-  group_by(keyword_id, search_engine) %>%
+  group_by(keyword, search_engine) %>%
   summarize(google1_position = rank_group[url == google_url_1][1], .groups = "drop")
 
 google1_positions <-
