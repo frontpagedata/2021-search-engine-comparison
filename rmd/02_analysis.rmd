@@ -56,10 +56,6 @@ We wanted to test how the other main search engines (Bing, DuckDuckGo, and Yahoo
 
 We analysed about 56k random searches for 4 search engines including Google,
  and came up with some insights based on the 30 top ranked results.
- 
-Note : Due to technicalities, 3% of our search results among the top 30 results
-of our search engines could not be identified, we believe this shouldn't impact
-sensibly our learnings.
 
 # Summary of insights
 
@@ -95,6 +91,29 @@ theme_set(theme_minimal(base_size = 12, base_family = "Poppins"))
 # source(here::here("scripts/03_similarity_metrics.R"))
 load(here::here("proc_data/datasets_for_report.Rdata"))
 ```
+
+# Cleaning steps
+
+* We start from a dataset containing 7,606,414 observations, where one observation
+is a search result for a given search engine
+* After we drop a handful of ill formatted keywords, filter to keep only organic 
+results and remove observations featuring a missing keyword we are left with 7,154,169 observations
+* After we join our data to our database of keywords we are left with 7,011,038 observations
+* After removing keywords that are not present for all 4 search engines we are left with
+7,010,575 observations
+* After removing keywords for which we find a missing URL we are left with 6,976,526 observations
+* After removing keywords for which we find a duplicate set of keyword_id, search_engine, rank_group
+we are left with 6,520,886 observations
+* After removing observations featuring a rank over 30 we are left with 6520838 observations
+* Overall we are left with 55,979 keywords
+
+Due to technicalities fetching data with the API, 3% of our search results among
+the top 30 results of our search engines could not be identified, i.e. we miss observations.
+
+We believe this shouldn't impact sensibly our learnings, and since removing all
+keywords showing an anomaly would drastically affect the sample size we build 
+artificial observations for these cases so we end up with 6,717,480
+observations, amounting to 55,979 keywords times 4 search_engines times 30 results.
 
 # Analysis
 
