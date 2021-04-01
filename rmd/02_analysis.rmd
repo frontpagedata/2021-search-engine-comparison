@@ -87,13 +87,31 @@ domain specific at all, show lower similarity to Google on average.
 
 ```{r load_and_setup, echo = T}
 library(tidyverse) # package used for data wrangling
+library(patchwork) # for combining plots together
 # options(dplyr.summarise.inform = F)
-theme_set(theme_minimal(base_size = 12, base_family = "Poppins"))
 # "datasets_for_report.Rdata" is built by the following commented calls
 # source(here::here("scripts/01_build_light_dataset.R"))
 # source(here::here("scripts/02_build_datasets_for_report.R"))
 # source(here::here("scripts/03_similarity_metrics.R"))
 load(here::here("proc_data/datasets_for_report.Rdata"))
+
+# Set theme for plots
+theme_set(theme_minimal(base_size = 12, base_family = "Poppins"))
+theme_update(
+  plot.title.position = "plot",
+    plot.title = element_text(face = "bold", margin = margin(b = 10)),
+    plot.margin = margin(10, 20, 10, 20),
+    plot.background = element_rect(fill = "#D3D2F9", color = NA),
+    legend.position = "none",
+    axis.title.x.bottom = element_text(color = "grey60", size = rel(0.7), hjust = 1, margin = margin(t = 5), face = "bold"),
+    axis.title.y.left = element_text(color = "grey60", size = rel(0.7), hjust = 1, margin = margin(r = 5), face = "bold"),
+    axis.text = element_text(size = rel(0.75)),
+    strip.background = element_rect(fill = "#807FFF", color = "white", size = 1.5),
+    strip.text = element_text(color = "white", face = "bold"),
+    panel.grid.minor = element_blank(),
+    panel.spacing.x = unit(2.5, "lines"),
+    panel.spacing.y = unit(2.5, "lines")
+)
 ```
 
 # Analysis
@@ -178,7 +196,7 @@ results to Google's top results, considering the top 10, top 20 or top 30.
 Though the difference is slight, we see that top results are most similar to 
 Google for medium volumes  (1000-10000 searches per month).
 
-```{r plot_search_volume_similarity, include = FALSE}
+```{r plot_search_volume_similarity, echo=T, results=F}
 se_labels <- 
   similarity_by_se_and_vol %>% 
   filter(monthly_search_volume_level == "10000-100000", grp == "top 10") %>% 
@@ -196,38 +214,23 @@ p <-
              group = search_engine)) +
   geom_line() +
   geom_point(aes(fill = search_engine), shape = 21, size = 4, color = "white", stroke = 0.6) +
-  ggrepel::geom_text_repel(data = se_labels, aes(label = search_engine), nudge_y = 0.01, size = 3, hjust = 0, fontface = "bold", family = "Poppins") +
+  ggrepel::geom_text_repel(data = se_labels, aes(label = search_engine), nudge_y = 0.0075, nudge_x = -0.35, size = 3, hjust = 0, fontface = "bold", family = "Poppins") +
   scale_y_continuous(limits = c(0.2, 0.35), breaks = seq(0.2, 0.35, 0.05), labels = scales::label_percent(accuracy = 1), expand = expansion(0)) +
   scale_x_discrete(expand = expansion(0.05)) +
-  scale_color_manual(values = c("#f25f5c", "#70c1b3", "#247ba0")) +
-  scale_fill_manual(values = c("#f25f5c", "#70c1b3", "#247ba0")) +
+  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
   labs(title = "Similarity to Google by Keyword's Monthly Search Volume",
        x = "Monthly Search Volume",
        y = "Search Engine Similarity") +
   facet_wrap(~grp, ncol = 3, labeller = labeller(grp = str_to_title)) +
-  coord_cartesian(clip = "off") +
-  theme(
-    plot.title.position = "plot",
-    plot.title = element_text(face = "bold", margin = margin(b = 10)),
-    plot.margin = margin(10, 20, 10, 20),
-    plot.background = element_rect(fill = "#D3D2F9", color = NA),
-    legend.position = "none",
-    axis.title.x.bottom = element_text(color = "grey60", size = rel(0.7), hjust = 1, margin = margin(t = 5), face = "bold"),
-    axis.title.y.left = element_text(color = "grey60", size = rel(0.7), hjust = 1, margin = margin(r = 5), face = "bold"),
-    axis.text = element_text(size = rel(0.75)),
-    strip.background = element_rect(fill = "#807FFF", color = "white", size = 1.5),
-    strip.text = element_text(color = "white", face = "bold"),
-    panel.grid.minor = element_blank(),
-    panel.spacing.x = unit(2.5, "lines"),
-    panel.spacing.y = unit(2.5, "lines")
-  ) 
+  coord_cartesian(clip = "off") 
 
-ragg::agg_png(here::here("plots", "plot_01_search_vol_similarity.png"), width = 9, height = 5, units = "in", res = 320)
+ragg::agg_png(here::here("plots", "plot_03_search_vol_similarity.png"), width = 9, height = 5, units = "in", res = 320)
 print(p)
 dev.off()
 ```
 
-![](../plots/plot_01_search_vol_similarity.png)
+![](../plots/plot_03_search_vol_similarity.png)
 
 ## Keyword categories
 
@@ -238,43 +241,65 @@ so we don't expect to have an equal amount in each category.
 The most common categories are News, Media & Publications, Arts & Entertainment, 
 Business & Industrial, and Hobbies & Leisure.
 
-```{r, echo = T}
-category1_counts %>% 
-  ggplot(aes(x = keyword_category, y = n)) +
-  geom_col() +
-  coord_flip() +
-  scale_y_continuous(labels = scales::label_comma()) +
-
+```{r plot_keyword_category, echo=T, results=F}
+p <- category1_counts %>% 
+  ggplot(aes(x = n, y = keyword_category)) +
+  # geom_col() +
+  geom_segment(aes(xend = -Inf, yend = keyword_category), size = 0.75, color = "grey95") +
+  geom_point(shape = 21, size = 4, fill = "#807FFF", stroke = 1.1, color = "grey95") +
+  scale_x_continuous(limits = c(0, NA), labels = scales::label_comma(), breaks = seq(4000, 16000, 4000)) +
   labs(title = "# of Keywords by Category",
-       x = "Keyword Category",
-       y = NULL)
+       x = NULL,
+       y = NULL) +
+  theme(
+    panel.grid.major.y = element_blank()
+  )
+
+ragg::agg_png(here::here("plots", "plot_04_keyword_category.png"), width = 9, height = 5, units = "in", res = 320)
+print(p)
+dev.off()
 ```
+
+![](../plots/plot_04_keyword_category.png)
 
 Deeper levels of categories are available, nested into the main categories,
 we show below the breakdown of the level 2 and 3 categories.
 
-```{r, echo = T}
-category2_counts %>% 
-  ggplot(aes(x = keyword_category, y = n)) +
-  geom_col() +
-  coord_flip() +
-  scale_y_continuous(labels = scales::label_comma()) +
+```{r plot_keyword_category_levels_2_3, echo=T, results=F}
+p1 <- category2_counts %>% 
+  ggplot(aes(x = n, y = keyword_category)) +
+  geom_segment(aes(xend = -Inf, yend = keyword_category), size = 0.75, color = "grey95") +
+  geom_point(shape = 21, size = 4, fill = "#807FFF", stroke = 1.1, color = "grey95") +
+  scale_x_continuous(limits = c(0, 6000), labels = scales::label_comma(), breaks = seq(2000, 6000, 2000)) +
+  labs(title = "# of Keywords by Category",
+       subtitle = "Level 2",
+       x = NULL,
+       y = NULL) +
+  theme(
+    plot.subtitle = element_text(face = "bold", color = "grey40"),
+    panel.grid.major.y = element_blank()
+  )
 
-  labs(title = "# of Keywords by Category (level 2)",
-       x = "Keyword Category",
-       y = NULL)
-
-category3_counts %>% 
-  ggplot(aes(x = keyword_category, y = n)) +
-  geom_col() +
-  coord_flip() +
-  scale_y_continuous(labels = scales::label_comma()) +
-
-  labs(title = "# of Keywords by Category (level 3)",
-       x = "Keyword Category",
-       y = NULL)
+p2 <- category3_counts %>% 
+  ggplot(aes(x = n, y = keyword_category)) +
+  geom_segment(aes(xend = -Inf, yend = keyword_category), size = 0.75, color = "grey95") +
+  geom_point(shape = 21, size = 4, fill = "#807FFF", stroke = 1.1, color = "grey95") +
+  scale_x_continuous(limits = c(0, 6000), labels = scales::label_comma(), breaks = seq(2000, 6000, 2000)) +
+  labs(subtitle = "Level 3",
+       x = NULL,
+       y = NULL) +
+  theme(
+    plot.subtitle = element_text(face = "bold", color = "grey40"),
+    panel.grid.major.y = element_blank()
+  )
   
+p <- p1 / p2
+
+ragg::agg_png(here::here("plots", "plot_05_keyword_category_levels_2_3.png"), width = 9, height = 10, units = "in", res = 320)
+print(p)
+dev.off()
 ```
+![](../plots/plot_05_keyword_category_levels_2_3.png)
 
 The following chart shows that there is significant variance in similarity 
 depending on what category the keyword belongs too. Real Estate and Travel & 
@@ -286,35 +311,86 @@ For every category Yahoo is the most dissimilar to Google and DuckDuckGo the mos
 and the difference in similarity between those goes up to about 3.5 % for some categories
 such as Health and Apparel.
 
-```{r, echo = T}
-similarity_by_se_and_category %>%
-  ggplot(aes(x = keyword_category, y = similarity,
-             group = search_engine, colour = search_engine)) +
-  geom_point() +
-  coord_flip() +
-  scale_y_continuous(labels = scales::label_percent()) +
-  labs(title = str_wrap("Search Engine similarity to Google by Keyword Category", 30),
-       subtitle = "Based on Top 10 rankings",
-       colour = "Search Engine", 
-       x = "Keyword Category",
-       y = "Search Engine Similarity")
+```{r plot_google_similarity, echo=T, results=F}
+p <- 
+  similarity_by_se_and_category %>%
+  ggplot(aes(x = similarity, y = keyword_category,
+             group = search_engine)) +
+  geom_point(aes(fill = search_engine), shape = 21, size = 5, stroke = 1.1, color = "grey95") +
+  scale_x_continuous(limits = c(0.2, 0.4), labels = scales::label_percent(accuracy = 1), expand = expansion(0), sec.axis = dup_axis(name = "")) +
+  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0"), limits = c("Yahoo", "Bing", "DuckDuck")) +
+  coord_cartesian(clip = "off") +
+  guides(
+    fill = guide_legend(
+      title.position = "top", 
+      title.hjust = 0.5, 
+      label.theme = element_text(size = 9, face = "bold", color = "grey30"),
+      nrow = 1
+    )
+  ) +
+  labs(
+    title = "Search Engine similarity to Google by Keyword Category",
+    subtitle = "Based on Top 10 rankings",
+    colour = "Search Engine", 
+    x = "Search Engine Similarity",
+    y = "",
+    fill = "Search Engine"
+  ) +
+  theme(
+    plot.subtitle = element_text(size = rel(1.1), face = "bold", color = "grey40"),
+    legend.position = c(0.8, 1.08),
+    legend.title = element_text(size = rel(0.8), face = "bold", color = "grey60")
+  )
+
+ragg::agg_png(here::here("plots", "plot_06_plot_google_similarity.png"), width = 9, height = 9, units = "in", res = 320)
+print(p)
+dev.off()
 ```
+
+![](../plots/plot_06_plot_google_similarity.png)
 
 We reproduce this chart for the 10 biggest subcategories of level 2.
 
-```{r, echo = T}
-similarity_by_se_and_category_2 %>%
-  ggplot(aes(x = keyword_category, y = similarity,
-             group = search_engine, colour = search_engine)) +
-  geom_point() +
-  coord_flip() +
-  scale_y_continuous(labels = scales::label_percent()) +
-  labs(title = str_wrap("Search Engine similarity to Google by Keyword Category (level 2)", 30),
-       subtitle = "Based on Top 10 rankings",
-       colour = "Search Engine", 
-       x = "Keyword Category",
-       y = "Search Engine Similarity")
+```{r plot_google_similarity_level_2, echo=T, results=F}
+p <- 
+  similarity_by_se_and_category_2 %>%
+  ggplot(aes(x = similarity, y = keyword_category,
+             group = search_engine)) +
+  geom_point(aes(fill = search_engine), shape = 21, size = 5, stroke = 1.1, color = "grey95") +
+  scale_x_continuous(limits = c(0.2, 0.4), labels = scales::label_percent(accuracy = 1), expand = expansion(0), sec.axis = dup_axis(name = "")) +
+  scale_y_discrete(expand = expansion(0.03)) +
+  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0"), limits = c("Yahoo", "Bing", "DuckDuck")) +
+  coord_cartesian(clip = "off") +
+  guides(
+    fill = guide_legend(
+      title.position = "top", 
+      title.hjust = 0.5, 
+      label.theme = element_text(size = 9, face = "bold", color = "grey30"),
+      nrow = 1
+    )
+  ) +
+  labs(
+    title = "Search Engine similarity to Google by Keyword Category (Level 2)",
+    subtitle = "Based on Top 10 rankings",
+    colour = "Search Engine", 
+    x = "Search Engine Similarity",
+    y = "",
+    fill = "Search Engine"
+  ) +
+  theme(
+    plot.subtitle = element_text(size = rel(1.1), face = "bold", color = "grey40"),
+    legend.position = c(0.8, 1.08),
+    legend.title = element_text(size = rel(0.8), face = "bold", color = "grey60")
+  )
+
+ragg::agg_png(here::here("plots", "plot_07_plot_google_similarity_level_2.png"), width = 9, height = 9, units = "in", res = 320)
+print(p)
+dev.off()
 ```
+
+![](../plots/plot_07_plot_google_similarity_level_2.png)
 
 Finally we offer a breakdown of the accuracy by main category and volume category.
 
@@ -322,21 +398,51 @@ We see that volume can make a big difference in some cases, for instance for
 Health related keywords Bing and DuckDuck become much more accurate as volume increases.
 
 We see also that Real Estate related searches yield the rankings most similar to
-google compared to other categories at low and medium volume, butnot at high volume.
+google compared to other categories at low and medium volume, but not at high volume.
 
-```{r, echo = T}
-similarity_by_se_category_and_vol %>%
-  ggplot(aes(x = keyword_category, y = similarity,
-             group = search_engine, colour = search_engine)) +
-  geom_point() +
-  coord_flip() +
-  facet_wrap(vars(monthly_search_volume_level)) +
-  scale_y_continuous(labels = scales::label_percent()) +
-  labs(title = str_wrap("Search Engine Similarity to Google by Keyword Category", 30),
-       colour = "Search Engine", 
-       x = "Keyword Category",
-       y = "Search Engine Similarity")
+```{r plot_google_similarity_by_vol, echo=T, results=F}
+p <- 
+  similarity_by_se_category_and_vol %>%
+  mutate(
+    monthly_search_volume_level = factor(monthly_search_volume_level, labels = c("0.5k-1k", "1k-10k", "10k-1m"))
+  ) %>% 
+  ggplot(aes(x = similarity, y = keyword_category,
+             group = search_engine)) +
+  geom_point(aes(fill = search_engine), shape = 21, size = 5, stroke = 1.1, color = "grey95") +
+  scale_x_continuous(limits = c(0.2, 0.4), labels = scales::label_percent(accuracy = 1), expand = expansion(0)) +
+  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0"), limits = c("Yahoo", "Bing", "DuckDuck")) +
+  coord_cartesian(clip = "off") +
+  facet_wrap(~ monthly_search_volume_level) +
+  guides(
+    fill = guide_legend(
+      title.position = "top", 
+      title.hjust = 0.5, 
+      label.theme = element_text(size = 9, face = "bold", color = "grey30"),
+      nrow = 1
+    )
+  ) +
+  labs(
+    title = "Search Engine Similarity to Google by Keyword Category",
+    colour = "Search Engine", 
+    x = "Search Engine Similarity",
+    y = "",
+    fill = "Search Engine"
+  ) +
+  theme(
+    plot.margin = margin(30, 20, 10, 20),
+    plot.subtitle = element_text(size = rel(1.1), face = "bold", color = "grey40"),
+    legend.position = c(0.86, 1.08),
+    legend.title = element_text(size = rel(0.8), face = "bold", color = "grey60"),
+    strip.placement = "outside"
+  )
+
+ragg::agg_png(here::here("plots", "plot_08_plot_google_similarity_by_vol.png"), width = 12, height = 9, units = "in", res = 320)
+print(p)
+dev.off()
 ```
+
+![](../plots/plot_08_plot_google_similarity_by_vol.png)
 
 Below we show, both for small and medium volume (resp. 500-1000 and 1000-10000),
 5 examples of Real Estate keywords for which we found the same url on the top 
@@ -355,16 +461,28 @@ There are also 29 search terms that have at least 10 words.
 For example `what are the first ten amendments to the constitution called` and 
 `how long does it take to become a pediatric nurse`.
 
-```{r, echo = T}
-kw_length_counts %>% 
+```{r plot_number_of_words, echo=T, results=F}
+p <- 
+  kw_length_counts %>% 
   ggplot(aes(x = keyword_length, y = n)) +
-  geom_col() +
+  geom_col(fill = "#807FFF", alpha = 0.8) +
+  geom_col(
+    data = filter(kw_length_counts, keyword_length %in% 2:4),
+    fill = colorspace::darken("#807FFF", 0.25),
+    alpha = 0.75
+  ) +
   scale_x_continuous(breaks = seq(0, 10, 1)) +
-  labs(title = "Keywords by # of Words",
-       y = "# of Keywords",
-       x = "# of Words in Keyword") +
-  scale_y_continuous(labels = scales::label_comma())
+  scale_y_continuous(limits = c(0, 20000), labels = scales::label_comma()) +
+  labs(title = "Keywords (Search terms) by Number of Words",
+       y = "Number of Keywords",
+       x = "Number of Words in Keyword") +
+
+ragg::agg_png(here::here("plots", "plot_09_plot_number_of_words.png"), width = 9, height = 6, units = "in", res = 320)
+print(p)
+dev.off()
 ```
+
+![](../plots/plot_09_plot_number_of_words.png)
 
 For all three search engines, the results get more similar to Google's on average
 as keywords get longer.
