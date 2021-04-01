@@ -12,26 +12,32 @@ compute_similarity_by_kw_and_se <-
       mutate(ref_urls = list(url[search_engine == ref])) %>%
       ungroup() %>%
       filter(search_engine != ref) %>%
-      left_join(domain_specificity_by_kw, by = "keyword_id") %>%
+      left_join(domain_specificity_by_kw, by = "keyword") %>%
       group_by(keyword, 
                search_engine, 
-               # below all are unique by keyword_id
+               # below all are unique by keyword
                monthly_search_volume_level,  
                keyword_info_categories,
                keyword_length = case_when(
                  str_count(str_trim(keyword, "both"), " ") +1 >= 5 ~ "5+",
                  TRUE ~ as.character(str_count(str_trim(keyword, "both"), " ") + 1)
                ),
-               domain_specificity_grouped    # unique by keyword_id
+               domain_specificity_grouped    # unique by keyword
       ) %>%
       summarize(
-        similarity = mean(url %in% ref_urls[[1]]),.groups = "drop")
+        # the below commented definition considers 2 missing urls as identical
+        # But a missing url on each side is more likely NOT to be the same, so we
+        # need a fancier computation
+        # similarity = mean(url %in% ref_urls[[1]]),
+        similarity = length(setdiff(intersect(url, ref_urls[[1]]), "missing_url")) / length(url),
+        .groups = "drop") %>%
+      mutate(similarity = ifelse(is.na(monthly_search_volume_level), NA, similarity))
   }
 
 compute_similarity_by_se <- function(data, ref = "Google") {
   data %>%
     group_by(search_engine) %>%
-    summarize(similarity = mean(similarity), .groups = "drop") %>%
+    summarize(similarity = mean(similarity, na.rm = TRUE), .groups = "drop") %>%
     mutate(search_engine2  = ref)
 }
 
@@ -182,26 +188,27 @@ similarity_by_se_3 <- bind_rows(
 similarity_to_google_by_se_and_vol_10 <-
   similarity_to_google_by_kw_and_se_10 %>%
   group_by(search_engine, monthly_search_volume_level) %>%
-  summarize(similarity = mean(similarity), .groups = "drop") %>% 
+  summarize(similarity = mean(similarity, na.rm = TRUE), .groups = "drop") %>% 
   mutate(grp = "top 10")
 
 similarity_to_google_by_se_and_vol_20 <-
   similarity_to_google_by_kw_and_se_20 %>%
   group_by(search_engine, monthly_search_volume_level) %>%
-  summarize(similarity = mean(similarity), .groups = "drop") %>% 
+  summarize(similarity = mean(similarity, na.rm = TRUE), .groups = "drop") %>% 
   mutate(grp = "top 20")
 
 similarity_to_google_by_se_and_vol_30 <-
   similarity_to_google_by_kw_and_se_30 %>%
   group_by(search_engine, monthly_search_volume_level) %>%
-  summarize(similarity = mean(similarity), .groups = "drop") %>% 
+  summarize(similarity = mean(similarity, na.rm = TRUE), .groups = "drop") %>% 
   mutate(grp = "top 30")
 
 similarity_by_se_and_vol <-
   bind_rows(
     similarity_to_google_by_se_and_vol_10, 
     similarity_to_google_by_se_and_vol_20, 
-    similarity_to_google_by_se_and_vol_30)
+    similarity_to_google_by_se_and_vol_30) %>%
+  filter(!is.na(monthly_search_volume_level))
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # compute similarity by search and category 1
@@ -224,7 +231,7 @@ similarity_by_se_and_category <-
   similarity_by_se_and_category_0  %>% 
   group_by(search_engine, keyword_category) %>% 
   summarize(
-    similarity = mean(similarity), 
+    similarity = mean(similarity, na.rm = TRUE), 
     n = n(),
     .groups = "drop")  %>% 
   mutate(keyword_category = fct_reorder(keyword_category, similarity)) %>%
@@ -245,7 +252,7 @@ similarity_by_se_and_category_2 <-
   )  %>% 
   group_by(search_engine, keyword_category) %>% 
   summarize(
-    similarity = mean(similarity), 
+    similarity = mean(similarity, na.rm = TRUE), 
     n = n(),
     .groups = "drop")  %>% 
   mutate(keyword_category = fct_reorder(keyword_category, similarity)) %>%
@@ -266,7 +273,7 @@ similarity_by_se_and_category_3 <-
   )  %>% 
   group_by(search_engine, keyword_category) %>% 
   summarize(
-    similarity = mean(similarity), 
+    similarity = mean(similarity, na.rm = TRUE), 
     n = n(),
     .groups = "drop")  %>% 
   mutate(keyword_category = fct_reorder(keyword_category, similarity)) %>%
@@ -282,7 +289,7 @@ similarity_by_se_category_and_vol <-
   similarity_by_se_and_category_0  %>% 
   group_by(search_engine, keyword_category, monthly_search_volume_level) %>% 
   summarize(
-    similarity = mean(similarity), 
+    similarity = mean(similarity, na.rm = TRUE), 
     n = n(),
     .groups = "drop")  %>% 
   mutate(keyword_category = fct_reorder(keyword_category, similarity)) %>%
@@ -296,7 +303,7 @@ similarity_by_se_and_kw_length <-
   similarity_to_google_by_kw_and_se_10 %>% 
   group_by(search_engine, keyword_length) %>% 
   summarize(
-    similarity = mean(similarity), 
+    similarity = mean(similarity, na.rm = TRUE), 
     n = n(),
     .groups = "drop")  %>% 
   arrange(desc(similarity))  
@@ -305,7 +312,7 @@ similarity_by_se_vol_and_kw_length <-
   similarity_by_se_and_category_0  %>% 
   group_by(search_engine, monthly_search_volume_level, keyword_length) %>% 
   summarize(
-    similarity = mean(similarity), 
+    similarity = mean(similarity, na.rm = TRUE), 
     n = n(),
     .groups = "drop")  %>% 
   # mutate(monthly_search_volume_level = monthly_search_volume_level)) %>%
@@ -319,7 +326,7 @@ similarity_by_se_and_spec <-
   similarity_to_google_by_kw_and_se_10 %>% 
   group_by(search_engine, domain_specificity_grouped) %>% 
   summarize(
-    similarity = mean(similarity), 
+    similarity = mean(similarity, na.rm = TRUE), 
     n = n(),
     .groups = "drop")  %>% 
   arrange(desc(similarity))
