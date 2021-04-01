@@ -81,7 +81,6 @@ domain specific at all, show higher accuracy on average.
 9. Accuracy varies on average depending on the domain extension of google's top
 result.
 
-
 ```{r load_and_setup, echo = T}
 library(tidyverse) # package used for data wrangling
 # options(dplyr.summarise.inform = F)
@@ -94,6 +93,104 @@ load(here::here("proc_data/datasets_for_report.Rdata"))
 ```
 
 # Analysis
+
+## How similar are the rankings between search engines?
+
+We define similarity between two search engines as the fraction of results (identified by url) that
+we find in both top 10 results of the pair.
+
+We see below that on average 73% of top 10 results on yahoo can be also found in the top 10 of Bing,
+making them the most similar pair.
+
+Google is very dissimilar to other search engines, especially Yahoo, its shares only
+28% of top 10 results wit the latter.
+
+```{r}
+similarity_by_se_10 %>%
+  ggplot() +
+  aes(descr, similarity, fill = search_engine2 == "Google") %>%
+  geom_col() + 
+  theme(legend.position = "none", axis.text.x = element_text(angle = 30)) +
+  labs(title = "Similarity between top 10 results of search engine pairs",
+       x = NULL,
+       y = "Average similarity") +
+  scale_y_continuous(labels = scales::label_percent()) 
+```
+
+We show below how these values change when we compute the similarity by considering
+the top 3, top 10, top 20 and top 30.
+
+We see overall that top3 generally the higher the number of top results considered,
+the least similar rankings will be. 
+It makes sense as the higher we are on the page the less random should be the results,
+and those should converge between search engines.
+
+An exception is the Yahoo and Bing pair, which is the most similar when considering the full top 30.
+
+We see that many of google's results are not found by its competitors (and inversely), 
+in particular on average only 20% to 25% of Google's top 30 results are found in
+the top 30 of its competitors.
+
+```{r}
+  bind_rows(
+  similarity_by_se_3,
+  similarity_by_se_10,
+  similarity_by_se_20,
+  similarity_by_se_30, 
+  .id = "n"
+) %>%
+  mutate(n = c(3, 10, 20, 30)[as.numeric(n)]) %>%
+  ggplot() +
+  aes(n, similarity, color = descr) +
+  geom_line() +
+  ggrepel::geom_label_repel(
+    aes(label = ifelse(n==30, as.character(descr), NA)),
+    nudge_x = 1,
+    na.rm = TRUE,
+    segment.alpha = 0,
+    hjust = 0,
+    direction = "y") +
+  xlim(0, 40) + 
+  theme(legend.position = "none") +
+  labs(
+    title = "Similarity between search engines",
+    x = "Number of top results considered"
+  ) +
+  scale_y_continuous(labels = scales::label_percent()) 
+
+
+# similarity_by_se_3 %>%
+#   ggplot() +
+#   aes(descr, similarity, fill = search_engine2 == "Google") %>%
+#   geom_col() + 
+#   theme(legend.position = "none", axis.text.x = element_text(angle = 30)) +
+#   labs(title = "Similarity between top 3 results of search engine pairs",
+#        x = NULL,
+#        y = "Average similarity") +
+#   scale_y_continuous(labels = scales::label_percent()) 
+# 
+# similarity_by_se_20 %>%
+#   ggplot() +
+#   aes(descr, similarity, fill = search_engine2 == "Google") %>%
+#   geom_col() + 
+#   theme(legend.position = "none", axis.text.x = element_text(angle = 30)) +
+#   labs(title = "Similarity between top 20 results of search engine pairs",
+#        x = NULL,
+#        y = "Average similarity") +
+#   scale_y_continuous(labels = scales::label_percent()) 
+# 
+# similarity_by_se_30 %>%
+#   ggplot() +
+#   aes(descr, similarity, fill = search_engine2 == "Google") %>%
+#   geom_col() + 
+#   theme(legend.position = "none", axis.text.x = element_text(angle = 30)) +
+#   labs(title = "Similarity between top 30 results of search engine pairs",
+#        x = NULL,
+#        y = "Average similarity") +
+#   scale_y_continuous(labels = scales::label_percent())
+```
+
+<!-- ## How accurate are the other search engines? -->
 
 ## How similar are the rankings between search engines?
 
@@ -743,6 +840,73 @@ top_domains_10 %>%
        y = "share of presence in top spot") +
   scale_y_continuous(labels = scales::label_percent()) 
 ```
+
+Find below the top domains considering top 3, top 20 and top 30
+
+```{r}
+top_domains_3 %>%
+  ggplot(aes(domain, pct, fill = search_engine)) +
+  geom_col(position = "dodge") + 
+  theme(axis.text.x = element_text(angle = 30)) +
+  labs(title = "Prevalence of big domains in searches",
+       subtitle = "Based on Top 3 rankings",
+       x = "domain",
+       y = "share of presence in top spot") +
+  scale_y_continuous(labels = scales::label_percent()) 
+
+top_domains_20 %>%
+  ggplot(aes(domain, pct, fill = search_engine)) +
+  geom_col(position = "dodge") + 
+  theme(axis.text.x = element_text(angle = 30)) +
+  labs(title = "Prevalence of big domains in searches",
+       subtitle = "Based on Top 20 rankings",
+       x = "domain",
+       y = "share of presence in top spot") +
+  scale_y_continuous(labels = scales::label_percent()) 
+
+top_domains_30 %>%
+  ggplot(aes(domain, pct, fill = search_engine)) +
+  geom_col(position = "dodge") + 
+  theme(axis.text.x = element_text(angle = 30)) +
+  labs(title = "Prevalence of big domains in searches",
+       subtitle = "Based on Top 30 rankings",
+       x = "domain",
+       y = "share of presence in top spot") +
+  scale_y_continuous(labels = scales::label_percent()) 
+```
+<!-- ## Domain specificity -->
+
+<!-- We define the domain specificity of a keyword as the number of top 10 Google results  -->
+<!-- that feature the dominant domain of this top 10. For instance a research that returns -->
+<!-- 3 ebay results, 5 amazon results, and 2 other results, would be dominated by amazon,  -->
+<!-- so would be considered "amazon specific", and would be attributed a domain specificity of 5. -->
+
+<!-- We observe a U shape curve here too, searches that are very domain specific, or not at all, -->
+<!-- show the most accuracy. It might be that moderate domain specificity is a symptom -->
+<!-- of an unclear search, while very high domain specificity shows that the search -->
+<!-- was more targetted. -->
+
+<!-- ```{r} -->
+
+<!-- domain_specificity_by_kw %>% -->
+<!--   count(domain_specificity_grouped) %>% -->
+<!--   ggplot(aes(domain_specificity_grouped, n)) + -->
+<!--   geom_col() + -->
+<!--   geom_text(aes(label = n), nudge_y = 700) + -->
+<!--   ggtitle("breakdown of domain specificity in our sample")  -->
+
+<!-- accuracy_by_se_and_spec %>% -->
+<!--   ggplot(aes(domain_specificity_grouped, y = accuracy, colour = search_engine, -->
+<!--              group = search_engine)) + -->
+<!--   geom_line() + -->
+<!--   geom_point() + -->
+<!--   scale_y_continuous(labels = scales::label_percent()) + -->
+<!--   labs(title = str_wrap("Search Engine Accuracy by Domain Specificity", 50), -->
+<!--        subtitle = "Top 10", -->
+<!--        colour = "Search Engine",  -->
+<!--        x = "Domain specificity", -->
+<!--        y = "Search Engine Accuracy") -->
+<!-- ``` -->
 
 Find below the top domains considering top 3, top 20 and top 30
 
