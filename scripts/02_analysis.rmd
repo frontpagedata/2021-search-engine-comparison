@@ -85,10 +85,12 @@ domain specific at all, show lower similarity to Google on average.
    found in position 1 to 3. For 25% to 35% of keywords for a given search engine,
    Google's top result won't be found in the top 30.
 
+
 ```{r load_and_setup, echo = T}
 library(tidyverse) # package used for data wrangling
 # options(dplyr.summarise.inform = F)
-theme_set(theme_minimal(base_size = 12, base_family = "Poppins"))
+theme_set(theme_minimal() +
+            theme(plot.title = element_text(size = 15)))
 # "datasets_for_report.Rdata" is built by the following commented calls
 # source(here::here("scripts/01_build_light_dataset.R"))
 # source(here::here("scripts/02_build_datasets_for_report.R"))
@@ -178,56 +180,20 @@ results to Google's top results, considering the top 10, top 20 or top 30.
 Though the difference is slight, we see that top results are most similar to 
 Google for medium volumes  (1000-10000 searches per month).
 
-```{r plot_search_volume_similarity, include = FALSE}
-se_labels <- 
-  similarity_by_se_and_vol %>% 
-  filter(monthly_search_volume_level == "10000-100000", grp == "top 10") %>% 
-  mutate(
-    monthly_search_volume_level = factor(monthly_search_volume_level, labels = "10k-1m"),
-    
-  )
-
-p <- 
-  similarity_by_se_and_vol %>% 
-  mutate(
-    monthly_search_volume_level = factor(monthly_search_volume_level, labels = c("0.5k-1k", "1k-10k", "10k-1m"))
-  ) %>% 
+```{r, echo = T}
+similarity_by_se_and_vol %>% 
   ggplot(aes(monthly_search_volume_level, y = similarity, colour = search_engine,
              group = search_engine)) +
   geom_line() +
-  geom_point(aes(fill = search_engine), shape = 21, size = 4, color = "white", stroke = 0.6) +
-  ggrepel::geom_text_repel(data = se_labels, aes(label = search_engine), nudge_y = 0.01, size = 3, hjust = 0, fontface = "bold", family = "Poppins") +
-  scale_y_continuous(limits = c(0.2, 0.35), breaks = seq(0.2, 0.35, 0.05), labels = scales::label_percent(accuracy = 1), expand = expansion(0)) +
-  scale_x_discrete(expand = expansion(0.05)) +
-  scale_color_manual(values = c("#f25f5c", "#70c1b3", "#247ba0")) +
-  scale_fill_manual(values = c("#f25f5c", "#70c1b3", "#247ba0")) +
-  labs(title = "Similarity to Google by Keyword's Monthly Search Volume",
+  geom_point() +
+  scale_y_continuous(labels = scales::label_percent()) +
+  labs(title = str_wrap("Similarity to Google by Keyword's Monthly Search Volume", 50),
+       subtitle = "Top 10",
+       colour = "Search Engine", 
        x = "Monthly Search Volume",
-       y = "Search Engine Similarity") +
-  facet_wrap(~grp, ncol = 3, labeller = labeller(grp = str_to_title)) +
-  coord_cartesian(clip = "off") +
-  theme(
-    plot.title.position = "plot",
-    plot.title = element_text(face = "bold", margin = margin(b = 10)),
-    plot.margin = margin(10, 20, 10, 20),
-    plot.background = element_rect(fill = "#D3D2F9", color = NA),
-    legend.position = "none",
-    axis.title.x.bottom = element_text(color = "grey60", size = rel(0.7), hjust = 1, margin = margin(t = 5), face = "bold"),
-    axis.title.y.left = element_text(color = "grey60", size = rel(0.7), hjust = 1, margin = margin(r = 5), face = "bold"),
-    axis.text = element_text(size = rel(0.75)),
-    strip.background = element_rect(fill = "#807FFF", color = "white", size = 1.5),
-    strip.text = element_text(color = "white", face = "bold"),
-    panel.grid.minor = element_blank(),
-    panel.spacing.x = unit(2.5, "lines"),
-    panel.spacing.y = unit(2.5, "lines")
-  ) 
-
-ragg::agg_png(here::here("plots", "plot_01_search_vol_similarity.png"), width = 9, height = 5, units = "in", res = 320)
-print(p)
-dev.off()
+       y = "Search Engine Accuracy") +
+  facet_wrap(vars(grp), ncol = 3)
 ```
-
-![](../plots/plot_01_search_vol_similarity.png)
 
 ## Keyword categories
 
@@ -507,73 +473,6 @@ top_domains_30 %>%
        y = "share of presence in top spot") +
   scale_y_continuous(labels = scales::label_percent()) 
 ```
-
-Find below the top domains considering top 3, top 20 and top 30
-
-```{r}
-top_domains_3 %>%
-  ggplot(aes(domain, pct, fill = search_engine)) +
-  geom_col(position = "dodge") + 
-  theme(axis.text.x = element_text(angle = 30)) +
-  labs(title = "Prevalence of big domains in searches",
-       subtitle = "Based on Top 3 rankings",
-       x = "domain",
-       y = "share of presence in top spot") +
-  scale_y_continuous(labels = scales::label_percent()) 
-
-top_domains_20 %>%
-  ggplot(aes(domain, pct, fill = search_engine)) +
-  geom_col(position = "dodge") + 
-  theme(axis.text.x = element_text(angle = 30)) +
-  labs(title = "Prevalence of big domains in searches",
-       subtitle = "Based on Top 20 rankings",
-       x = "domain",
-       y = "share of presence in top spot") +
-  scale_y_continuous(labels = scales::label_percent()) 
-
-top_domains_30 %>%
-  ggplot(aes(domain, pct, fill = search_engine)) +
-  geom_col(position = "dodge") + 
-  theme(axis.text.x = element_text(angle = 30)) +
-  labs(title = "Prevalence of big domains in searches",
-       subtitle = "Based on Top 30 rankings",
-       x = "domain",
-       y = "share of presence in top spot") +
-  scale_y_continuous(labels = scales::label_percent()) 
-```
-<!-- ## Domain specificity -->
-
-<!-- We define the domain specificity of a keyword as the number of top 10 Google results  -->
-<!-- that feature the dominant domain of this top 10. For instance a research that returns -->
-<!-- 3 ebay results, 5 amazon results, and 2 other results, would be dominated by amazon,  -->
-<!-- so would be considered "amazon specific", and would be attributed a domain specificity of 5. -->
-
-<!-- We observe a U shape curve here too, searches that are very domain specific, or not at all, -->
-<!-- show the most accuracy. It might be that moderate domain specificity is a symptom -->
-<!-- of an unclear search, while very high domain specificity shows that the search -->
-<!-- was more targetted. -->
-
-<!-- ```{r} -->
-
-<!-- domain_specificity_by_kw %>% -->
-<!--   count(domain_specificity_grouped) %>% -->
-<!--   ggplot(aes(domain_specificity_grouped, n)) + -->
-<!--   geom_col() + -->
-<!--   geom_text(aes(label = n), nudge_y = 700) + -->
-<!--   ggtitle("breakdown of domain specificity in our sample")  -->
-
-<!-- accuracy_by_se_and_spec %>% -->
-<!--   ggplot(aes(domain_specificity_grouped, y = accuracy, colour = search_engine, -->
-<!--              group = search_engine)) + -->
-<!--   geom_line() + -->
-<!--   geom_point() + -->
-<!--   scale_y_continuous(labels = scales::label_percent()) + -->
-<!--   labs(title = str_wrap("Search Engine Accuracy by Domain Specificity", 50), -->
-<!--        subtitle = "Top 10", -->
-<!--        colour = "Search Engine",  -->
-<!--        x = "Domain specificity", -->
-<!--        y = "Search Engine Accuracy") -->
-<!-- ``` -->
 
 ## Domain specificity
 
