@@ -443,6 +443,7 @@ p <-
   ) +
   labs(
     title = "Search Engine Similarity to Google by Keyword Category",
+    subtitle = "Based on Top 10 rankings",
     colour = "Search Engine", 
     x = "Search Engine Similarity",
     y = "",
@@ -514,19 +515,35 @@ It might be that long keywords are more precise, so the pool of potential target
 the length of the search and long searches tend to converge over search engines too.
 
 
-```{r, echo = T}
-similarity_by_se_and_kw_length %>%
-  ggplot(aes(keyword_length, y = similarity, colour = search_engine,
-             group = search_engine)) +
+```{r plot_similarity_keyword_length, echo = T, results=F}
+p <- 
+  similarity_by_se_and_kw_length %>%
+  ggplot(aes(keyword_length, y = similarity, colour = search_engine, group = search_engine)) +
   geom_line() +
-  geom_point() +
-  scale_y_continuous(labels = scales::label_percent()) +
-  labs(title = str_wrap("Search Engine Similarity to Google by Keyword Length", 50),
+  geom_point(aes(fill = search_engine), shape = 21, size = 4, color = "white", stroke = 0.6) +
+  ggrepel::geom_text_repel(data = filter(similarity_by_se_and_kw_length, keyword_length == "5+"), 
+                           aes(label = search_engine), size = 3, hjust = 0, nudge_y = 0.005, fontface = "bold", family = "Poppins") +
+  scale_y_continuous(limits = c(0.25, 0.40), breaks = seq(0.25, 0.40, 0.05), labels = scales::label_percent(accuracy = 1), expand = expansion(0)) +
+  scale_x_discrete(expand = expansion(0.01)) +
+  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  labs(title = "Search Engine Similarity to Google by Keyword Length",
        subtitle = "Based on Top 10 rankings",
        colour = "Search Engine", 
        x = "Keyword Length in Words",
-       y = "Search Engine Similarity")
+       y = "Search Engine Similarity") +
+  coord_cartesian(clip = "off") +
+  theme(
+    plot.title = element_text(face = "bold", margin = margin(b = 5)),
+    plot.subtitle = element_text(face = "bold", color = "grey40", margin = margin(b = 15))
+  )
+  
+ragg::agg_png(here::here("plots", "plot_10_plot_similarity_keyword_length.png"), width = 7, height = 4.5, units = "in", res = 320)
+print(p)
+dev.off()
 ```
+
+![](../plots/plot_10_plot_similarity_keyword_length.png)
 
 Breaking it down by volume level, we observe the same tendency but with a stronger trend
 for smaller volume (generally smaller minima and higher maxima). 
@@ -535,20 +552,48 @@ terms make the search very precise and given that the pool of results is restric
 the rankings will tend to converge, while a short search for low volume keywords
 is not precise enough to converge over search engines.
 
-```{r, echo = T}
-similarity_by_se_vol_and_kw_length %>%
-  ggplot(aes(keyword_length, y = similarity, colour = search_engine,
-             group = search_engine)) +
+```{r plot_similarity_vol_keyword_length, echo = T, results = F}
+se_labels <- 
+  similarity_by_se_vol_and_kw_length %>%
+  mutate(
+    monthly_search_volume_level = factor(monthly_search_volume_level, labels = c("0.5k-1k", "1k-10k", "10k-1m"))
+  ) %>% 
+  filter(monthly_search_volume_level == "0.5k-1k", keyword_length == "5+")
+
+p <- 
+  similarity_by_se_vol_and_kw_length %>%
+  mutate(
+    monthly_search_volume_level = factor(monthly_search_volume_level, labels = c("0.5k-1k", "1k-10k", "10k-1m"))
+  ) %>% 
+  ggplot(aes(keyword_length, y = similarity, colour = search_engine, group = search_engine)) +
   geom_line() +
-  geom_point() +
-  scale_y_continuous(labels = scales::label_percent()) +
-  labs(title = str_wrap("Search Engine similarity to Google by Keyword Length", 50),
+  geom_point(aes(fill = search_engine), shape = 21, size = 4, color = "white", stroke = 0.6) +
+  ggrepel::geom_text_repel(
+    data = se_labels, 
+    aes(label = search_engine), size = 3, hjust = 0, nudge_y = 0.005, nudge_x = c(-1.3, -0.7, -0.8), fontface = "bold", family = "Poppins"
+  ) +
+  scale_y_continuous(limits = c(0.25, 0.4), breaks = seq(0.25, 0.4, 0.05), labels = scales::label_percent(accuracy = 1), expand = expansion(0)) +
+  scale_x_discrete(expand = expansion(0.01)) +
+  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  labs(title = "Search Engine similarity to Google by Keyword Length",
        subtitle = "Top 10 - breakdown by volume level",
        colour = "Search Engine", 
        x = "Keyword Length in Words",
        y = "Search Engine Similarity") +
-  facet_wrap(vars(monthly_search_volume_level), ncol=3)
+  facet_wrap(~monthly_search_volume_level, ncol=3) +
+  coord_cartesian(clip = "off") +
+  theme(
+    plot.title = element_text(face = "bold", margin = margin(b = 5)),
+    plot.subtitle = element_text(face = "bold", color = "grey40", margin = margin(b = 15))
+  )
+  
+ragg::agg_png(here::here("plots", "plot_11_plot_similarity_vol_keyword_length.png"), width = 9, height = 4.5, units = "in", res = 320)
+print(p)
+dev.off()
 ```
+
+![](../plots/plot_11_plot_similarity_vol_keyword_length.png)
 
 Below we show, both for single word searches and long searches,
 5 examples for which we found the same url on the top 
