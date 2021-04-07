@@ -1,5 +1,5 @@
 ---
-title: "02 Analysis"
+title: "Search Egine Comparison Study: Results From 6.5M SERP Results"
 date: "Last update: `r Sys.Date()`"
 output:
   html_document:
@@ -12,6 +12,8 @@ output:
       collapsed: false
     number_sections: true
 ---
+
+```{=html}
 <style>
 .list-group-item.active, .list-group-item.active:hover, .list-group-item.active:focus {
   background-color: #00d188;
@@ -42,7 +44,7 @@ h3 {
   font-size: 18px;
 }
 </style>
-
+```
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.showtext = TRUE)
 knitr::knit_hooks$set(inline = function(x) {
@@ -50,36 +52,25 @@ knitr::knit_hooks$set(inline = function(x) {
 })
 ```
 
+Google is the most used search engine ([92% market share](https://gs.statcounter.com/search-engine-market-share)). We wanted to know how Google search results compared to other search engines, namely Bing, DuckDuckGo, and Yahoo).
 
-Google is said to have the most accurate search engine (X% market share). 
-We wanted to test how the other main search engines (Bing, DuckDuckGo, and Yahoo) compared to Google.
-
-We analysed about 56k random searches for 4 search engines including Google,
- and came up with some insights based on the 30 top ranked results.
+We analysed about 56k random keyword searches for 4 search engines including Google, and came up with some insights based on the 30 top ranked results.
 
 # Summary of insights
 
-1. The results of Google's competitors are more similar between themselves than
-similar to Google's. DuckDuckGo is the most similar to Google (31%) and Yahoo is
-the least similar (29%).
+1.  The results of Google's competitors are more similar between themselves than similar to Google's. DuckDuckGo is the most similar to Google (31%) and Yahoo is the least similar (29%).
 
-2. For all search engines, the similarity doesn't change much with search volume,
-though search engine results are consistently more similar to Google's for medium volume (between 10k and 100k)
-volume, with gains between 1.5% and 2% when comparing volume of more and less than 10k.
+2.  For all search engines, the similarity doesn't change much with search volume, though search engine results are consistently more similar to Google's for medium volume (between 10k and 100k) volume, with gains between 1.5% and 2% when comparing volume of more and less than 10k.
 
-3. Similarity differs by category. Real Estate and Travel & Tourism are more 
-similar across _all_ search engines, while Apparel related results are less similar.
+3.  Similarity differs by category. Real Estate and Travel & Tourism are more similar across *all* search engines, while Apparel related results are less similar.
 
-4. Similarity is higher for long searches.
+4.  Similarity is higher for long searches.
 
-5. The different search engines feature in different amounts big domains such as amazon in their top result.
+5.  The different search engines feature in different amounts big domains such as amazon in their top result.
 
-7. Searches that tend to yield results predominantly linking to a specific domain (domain specific), OR non
-domain specific at all, show lower similarity to Google on average.
+6.  Searches that tend to yield results predominantly linking to a specific domain (domain specific), OR non domain specific at all, show lower similarity to Google on average.
 
-8. In more than half of the cases in any search engine, Google's top result is
-   found in position 1 to 3. For 25% to 35% of keywords for a given search engine,
-   Google's top result won't be found in the top 30.
+7.  In more than half of the cases in any search engine, Google's top result is found in position 1 to 3. For 25% to 35% of keywords for a given search engine, Google's top result won't be found in the top 30.
 
 ```{r load_and_setup, echo = T}
 library(tidyverse) # package used for data wrangling
@@ -112,42 +103,32 @@ theme_update(
 )
 ```
 
-# Cleaning steps
+# Methodology 
 
-* We start from a dataset containing 7,606,414 observations, where one observation
-is a search result for a given search engine
-* After we drop a handful of ill formatted keywords, filter to keep only organic 
-results and remove observations featuring a missing keyword we are left with 7,154,169 observations
-* After we join our data to our database of keywords we are left with 7,011,038 observations
-* After removing keywords that are not present for all 4 search engines we are left with
-7,010,575 observations
-* After removing keywords for which we find a missing URL we are left with 6,976,526 observations
-* After removing keywords for which we find a duplicate set of keyword_id, search_engine, rank_group
-we are left with 6,520,886 observations
-* After removing observations featuring a rank over 30 we are left with 6520838 observations
-* Overall we are left with 55,979 keywords
+-   We started by taking a random subset of 60k keywords from Dataforseo´s 354M large US keyword database. The subset contained an equal set of keywords with monthly search volumes of 500-1000 , 1000-10000 and 10000-100000, respectively.
+-   We used DataForSEO´s SERP API to populate the top 30 search results for each keyword across 4 search engines.
+-   We start from a dataset containing 7,606,414 observations, where one observation is a search result for a given search engine
+-   After we drop a handful of ill formatted keywords, filter to keep only organic results and remove observations featuring a missing keyword we are left with 7,154,169 observations
+-   After we join our data to our database of keywords we are left with 7,011,038 observations
+-   After removing keywords that are not present for all 4 search engines we are left with 7,010,575 observations
+-   After removing keywords for which we find a missing URL we are left with 6,976,526 observations
+-   After removing keywords for which we find a duplicate set of keyword\_id, search\_engine, rank\_group we are left with 6,520,886 observations
+-   After removing observations featuring a rank over 30 we are left with 6520838 observations
+-   Overall we are left with 55,979 keywords
 
-Due to technicalities fetching data with the API, 3% of our search results among
-the top 30 results of our search engines could not be identified, i.e. we miss observations.
+Due to technicalities fetching data with the API, 3% of our search results among the top 30 results of our search engines could not be identified, i.e. we miss observations.
 
-We believe this shouldn't impact sensibly our learnings, and since removing all
-keywords showing an anomaly would drastically affect the sample size we build 
-artificial observations for these cases so we end up with 6,717,480
-observations, amounting to 55,979 keywords times 4 search_engines times 30 results.
+We believe this shouldn't impact sensibly our learnings, and since removing all keywords showing an anomaly would drastically affect the sample size we build artificial observations for these cases so we end up with 6,717,480 observations, amounting to 55,979 keywords times 4 search\_engines times 30 results.
 
 # Analysis
 
 ## How similar are the rankings between search engines?
 
-We define similarity between two search engines as the fraction of results (identified by url) that
-we find in both top 10 results of the pair.
+We define similarity between two search engines as the fraction of results (identified by url) that we find in both top 10 results of the pair.
 
-We see below that on average 70% of top 10 results on yahoo can be also found in the top 10 of Bing,
-making them the most similar pair.
+We see below that on average 70% of top 10 results on yahoo can be also found in the top 10 of Bing, making them the most similar pair.
 
-Google is very dissimilar to other search engines, especially Yahoo, its shares only
-29% of top 10 results wit the latter. It is most similar to DuckDuckGo, with a
-similarity indicator of 31%.
+Google is very dissimilar to other search engines, especially Yahoo, its shares only 29% of top 10 results wit the latter. It is most similar to DuckDuckGo, with a similarity indicator of 31%.
 
 ```{r plot_ranking_similarity, echo=T, results=F}
 se_list <- c("Google", "Yahoo", "Bing", "DuckDuck") 
@@ -201,19 +182,13 @@ print(p)
 dev.off()
 ```
 
-![](../plots/plot_01_plot_ranking_similarity.png){height=75%, width=75%}
+![](../plots/plot_01_plot_ranking_similarity.png){height="75%," width="75%"}
 
-We show below how these values change when we compute the similarity by considering
-the top 3, top 10, top 20 and top 30.
+We show below how these values change when we compute the similarity by considering the top 3, top 10, top 20 and top 30.
 
-We see overall that generally the higher the number of top results considered,
-the least similar rankings will be. 
-It makes sense as the higher we are on the page the less random should be the results,
-and those should converge between search engines.
+We see overall that generally the higher the number of top results considered, the least similar rankings will be. It makes sense as the higher we are on the page the less random should be the results, and those should converge between search engines.
 
-We see that many of google's results are not found by its competitors (and inversely), 
-in particular on average about only 25% of Google's top 30 results are found in
-the top 30 of its competitors.
+We see that many of google's results are not found by its competitors (and inversely), in particular on average about only 25% of Google's top 30 results are found in the top 30 of its competitors.
 
 ```{r plot_ranking_similarity_trend, echo=T, results=F}
 se_list <- c("Google", "Yahoo", "Bing", "DuckDuck") 
@@ -283,21 +258,20 @@ ragg::agg_png(here::here("plots", "plot_02_plot_ranking_similarity_trend.png"), 
 print(p)
 dev.off()
 ```
+
 ![](../plots/plot_02_plot_ranking_similarity_trend.png)
 
 ## Monthly search volume
 
-The sample of search keywords were chosen so we got a fairly even split across different search volumes. 
+The sample of search keywords were chosen so we got a fairly even split across different search volumes.
 
 ```{r, echo = T}
 monthly_search_volume
 ```
 
-We show below how search volume affects the similarity of a search engine's top 
-results to Google's top results, considering the top 10, top 20 or top 30.
+We show below how search volume affects the similarity of a search engine's top results to Google's top results, considering the top 10, top 20 or top 30.
 
-Though the difference is slight, we see that top results are most similar to 
-Google for medium volumes  (1000-10000 searches per month).
+Though the difference is slight, we see that top results are most similar to Google for medium volumes (1000-10000 searches per month).
 
 ```{r plot_search_volume_similarity, echo=T, results=F}
 se_labels <- 
@@ -337,12 +311,9 @@ dev.off()
 
 ## Keyword categories
 
-Each of the keywords comes with categories (or tags). It's possible for keywords
-to belong to more than one category. The sample of keywords was drawn randomly 
-so we don't expect to have an equal amount in each category. 
+Each of the keywords comes with categories (or tags). It's possible for keywords to belong to more than one category. The sample of keywords was drawn randomly so we don't expect to have an equal amount in each category.
 
-The most common categories are News, Media & Publications, Arts & Entertainment, 
-Business & Industrial, and Hobbies & Leisure.
+The most common categories are News, Media & Publications, Arts & Entertainment, Business & Industrial, and Hobbies & Leisure.
 
 ```{r plot_keyword_category, echo=T, results=F}
 p <- category1_counts %>% 
@@ -365,8 +336,7 @@ dev.off()
 
 ![](../plots/plot_04_keyword_category.png)
 
-Deeper levels of categories are available, nested into the main categories,
-we show below the breakdown of the level 2 and 3 categories.
+Deeper levels of categories are available, nested into the main categories, we show below the breakdown of the level 2 and 3 categories.
 
 ```{r plot_keyword_category_levels_2_3, echo=T, results=F}
 p1 <- category2_counts %>% 
@@ -402,17 +372,12 @@ ragg::agg_png(here::here("plots", "plot_05_keyword_category_levels_2_3.png"), wi
 print(p)
 dev.off()
 ```
+
 ![](../plots/plot_05_keyword_category_levels_2_3.png)
 
-The following chart shows that there is significant variance in similarity 
-depending on what category the keyword belongs too. Real Estate and Travel & 
-Tourism are the categories where the top 10 between Google and other search 
-engines is the most similar, while Apparel and Beauty & Personal Care is the 
-category showing the most dissimilar top 10.
+The following chart shows that there is significant variance in similarity depending on what category the keyword belongs too. Real Estate and Travel & Tourism are the categories where the top 10 between Google and other search engines is the most similar, while Apparel and Beauty & Personal Care is the category showing the most dissimilar top 10.
 
-For every category Yahoo is the most dissimilar to Google and DuckDuckGo the most similar,
-and the difference in similarity between those goes up to about 3.5 % for some categories
-such as Health and Apparel.
+For every category Yahoo is the most dissimilar to Google and DuckDuckGo the most similar, and the difference in similarity between those goes up to about 3.5 % for some categories such as Health and Apparel.
 
 ```{r plot_google_similarity, echo=T, results=F}
 p <- 
@@ -497,11 +462,9 @@ dev.off()
 
 Finally we offer a breakdown of the accuracy by main category and volume category.
 
-We see that volume can make a big difference in some cases, for instance for
-Health related keywords Bing and DuckDuck become much more accurate as volume increases.
+We see that volume can make a big difference in some cases, for instance for Health related keywords Bing and DuckDuck become much more accurate as volume increases.
 
-We see also that Real Estate related searches yield the rankings most similar to
-google compared to other categories at low and medium volume, but not at high volume.
+We see also that Real Estate related searches yield the rankings most similar to google compared to other categories at low and medium volume, but not at high volume.
 
 ```{r plot_google_similarity_by_vol, echo=T, results=F}
 p <- 
@@ -548,9 +511,7 @@ dev.off()
 
 ![](../plots/plot_08_plot_google_similarity_by_vol.png)
 
-Below we show, both for small and medium volume (resp. 500-1000 and 1000-10000),
-5 examples of Real Estate keywords for which we found the same url on the top 
-for every search engine.
+Below we show, both for small and medium volume (resp. 500-1000 and 1000-10000), 5 examples of Real Estate keywords for which we found the same url on the top for every search engine.
 
 ```{r}
 real_estate_examples_small_volume[c("keyword", "url")]
@@ -560,10 +521,7 @@ real_estate_examples_medium_volume[c("keyword", "url")]
 
 ## Number of words
 
-Most keywords (search terms) have between 2 and 4 words. 
-There are also 29 search terms that have at least 10 words. 
-For example `what are the first ten amendments to the constitution called` and 
-`how long does it take to become a pediatric nurse`.
+Most keywords (search terms) have between 2 and 4 words. There are also 29 search terms that have at least 10 words. For example `what are the first ten amendments to the constitution called` and `how long does it take to become a pediatric nurse`.
 
 ```{r plot_number_of_words, echo=T, results=F}
 p <- 
@@ -588,16 +546,11 @@ dev.off()
 
 ![](../plots/plot_09_plot_number_of_words.png)
 
-For all three search engines, the results get more similar to Google's on average
-as keywords get longer.
+For all three search engines, the results get more similar to Google's on average as keywords get longer.
 
-On average accuracy for length 1 we measure a similarity in the 28-30% range,
-while for keywords made of more than 5 terms we get an average similarity in the
-31.5-35% range).
+On average accuracy for length 1 we measure a similarity in the 28-30% range, while for keywords made of more than 5 terms we get an average similarity in the 31.5-35% range).
 
-It might be that long keywords are more precise, so the pool of potential targets decreases with
-the length of the search and long searches tend to converge over search engines too.
-
+It might be that long keywords are more precise, so the pool of potential targets decreases with the length of the search and long searches tend to converge over search engines too.
 
 ```{r plot_similarity_keyword_length, echo = T, results=F}
 p <- 
@@ -629,12 +582,7 @@ dev.off()
 
 ![](../plots/plot_10_plot_similarity_keyword_length.png)
 
-Breaking it down by volume level, we observe the same tendency but with a stronger trend
-for smaller volume (generally smaller minima and higher maxima). 
-It might be that for low volume searches, a high number of
-terms make the search very precise and given that the pool of results is restricted
-the rankings will tend to converge, while a short search for low volume keywords
-is not precise enough to converge over search engines.
+Breaking it down by volume level, we observe the same tendency but with a stronger trend for smaller volume (generally smaller minima and higher maxima). It might be that for low volume searches, a high number of terms make the search very precise and given that the pool of results is restricted the rankings will tend to converge, while a short search for low volume keywords is not precise enough to converge over search engines.
 
 ```{r plot_similarity_vol_keyword_length, echo = T, results = F}
 se_labels <- 
@@ -679,33 +627,26 @@ dev.off()
 
 ![](../plots/plot_11_plot_similarity_vol_keyword_length.png)
 
-Below we show, both for single word searches and long searches,
-5 examples for which we found the same url on the top 
-for every search engine.
+Below we show, both for single word searches and long searches, 5 examples for which we found the same url on the top for every search engine.
 
-We see that the single word searches here are either brands, or products, leading to an
-official company webpage, or the definition of a technical word.
+We see that the single word searches here are either brands, or products, leading to an official company webpage, or the definition of a technical word.
 
-Long searches are more specific and tend to yield result that include the search,
-barely modified, in their address.
+Long searches are more specific and tend to yield result that include the search, barely modified, in their address.
 
 ```{r}
 short_kw_examples
 long_kw_examples
 ```
 
-
 ## Top domains
 
-We take a look at the top 10 domains featured in 1st position of Google searches
-and see for which proportion of keyword they come up on top.
+We take a look at the top 10 domains featured in 1st position of Google searches and see for which proportion of keyword they come up on top.
 
 We see that search engines vary sensibly in which domain they put on top.
 
-* Wikipedia is huge for all engines, but is featured significantly more by
-  Google and Yahoo
-* Amazon is less featured by Google than by its competitors.
-* IMDB is much less featured by Google than by competitors
+-   Wikipedia is huge for all engines, but is featured significantly more by Google and Yahoo
+-   Amazon is less featured by Google than by its competitors.
+-   IMDB is much less featured by Google than by competitors
 
 ```{r plot_top_domains_top_result, echo = T, results = F}
 compare_to_google <- 
@@ -772,11 +713,10 @@ dev.off()
 
 ![](../plots/plot_12_plot_top_domains_top_result.png)
 
-We reproduce the analysis considering the whole top 10 results rather than only
-the top result.
+We reproduce the analysis considering the whole top 10 results rather than only the top result.
 
-* We lose the wikipedia bias for Google when we look at the full top 10
-* Pinterest and facebook are twice more featured by Google
+-   We lose the wikipedia bias for Google when we look at the full top 10
+-   Pinterest and facebook are twice more featured by Google
 
 ```{r plot_top_domains_top_10_result, echo = T, results = F}
 compare_to_google <- 
@@ -1045,43 +985,62 @@ dev.off()
 <!-- ## Domain specificity -->
 
 <!-- We define the domain specificity of a keyword as the number of top 10 Google results  -->
+
 <!-- that feature the dominant domain of this top 10. For instance a research that returns -->
+
 <!-- 3 ebay results, 5 amazon results, and 2 other results, would be dominated by amazon,  -->
+
 <!-- so would be considered "amazon specific", and would be attributed a domain specificity of 5. -->
 
 <!-- We observe a U shape curve here too, searches that are very domain specific, or not at all, -->
+
 <!-- show the most accuracy. It might be that moderate domain specificity is a symptom -->
+
 <!-- of an unclear search, while very high domain specificity shows that the search -->
+
 <!-- was more targetted. -->
 
 <!-- ```{r} -->
 
 <!-- domain_specificity_by_kw %>% -->
+
 <!--   count(domain_specificity_grouped) %>% -->
+
 <!--   ggplot(aes(domain_specificity_grouped, n)) + -->
+
 <!--   geom_col() + -->
+
 <!--   geom_text(aes(label = n), nudge_y = 700) + -->
+
 <!--   ggtitle("breakdown of domain specificity in our sample")  -->
 
 <!-- accuracy_by_se_and_spec %>% -->
+
 <!--   ggplot(aes(domain_specificity_grouped, y = accuracy, colour = search_engine, -->
+
 <!--              group = search_engine)) + -->
+
 <!--   geom_line() + -->
+
 <!--   geom_point() + -->
+
 <!--   scale_y_continuous(labels = scales::label_percent()) + -->
+
 <!--   labs(title = str_wrap("Search Engine Accuracy by Domain Specificity", 50), -->
+
 <!--        subtitle = "Top 10", -->
+
 <!--        colour = "Search Engine",  -->
+
 <!--        x = "Domain specificity", -->
+
 <!--        y = "Search Engine Accuracy") -->
+
 <!-- ``` -->
 
 ## Domain specificity
 
-We define the domain specificity of a keyword as the number of top 10 Google results 
-that feature the dominant domain of this top 10. For instance a research that returns
-3 ebay results, 5 amazon results, and 2 other results, would be dominated by amazon, 
-so would be considered "amazon specific", and would be attributed a domain specificity of 5.
+We define the domain specificity of a keyword as the number of top 10 Google results that feature the dominant domain of this top 10. For instance a research that returns 3 ebay results, 5 amazon results, and 2 other results, would be dominated by amazon, so would be considered "amazon specific", and would be attributed a domain specificity of 5.
 
 For every search engine we observe that searches that are more domain specific tend to yield results less similar to Google's.
 
@@ -1126,7 +1085,7 @@ print(p)
 dev.off()
 ```
 
-![](../plots/plot_17_plot_domain_specificity.png){height=75%, width=75%}
+![](../plots/plot_17_plot_domain_specificity.png){height="75%," width="75%"}
 
 ```{r plot_se_similarity_domain_specificity, echo = T, results = F}
 p <- 
@@ -1163,20 +1122,15 @@ dev.off()
 
 ## At what position is Google's first result ?
 
-We take a look at the position at which we find the first Google result in the results
-of the competitors.
+We take a look at the position at which we find the first Google result in the results of the competitors.
 
-The most likely position of the first Google result is 1st. For every search engine,
-around 35% of keywords will have Google's first result on top. 
+The most likely position of the first Google result is 1st. For every search engine, around 35% of keywords will have Google's first result on top.
 
 For every search engine, in 12% of the cases, the the first Google result is found in second position.
 
 The second most likely position is that it's not found at all in the top 30.
 
-A fair amount of google first results are not found at all by other search engines,
-at least not in the top 30, so we cannot compute a mean position, but we see
-that for every other search engine,  we find google's top results in the top 3 
-more than half of the time.
+A fair amount of google first results are not found at all by other search engines, at least not in the top 30, so we cannot compute a mean position, but we see that for every other search engine, we find google's top results in the top 3 more than half of the time.
 
 ```{r plot_search_position, echo = T, results = F}
 search_position_df <- 
@@ -1237,8 +1191,8 @@ print(p)
 dev.off()
 ```
 
-
 ![](../plots/plot_19_plot_search_position.png)
+
 ```{r}
 # computing the mean position is not possible because a fair amount of Google
 # first urls are just not found, so the mean is undefined, we can compute the 
