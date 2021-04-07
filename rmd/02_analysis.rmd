@@ -1,5 +1,5 @@
 ---
-title: "Search Egine Comparison Study: Results From 6.5M SERP Results"
+title: "Search Engine Comparison Study: Results From 6.5M SERP Results"
 date: "Last update: `r Sys.Date()`"
 output:
   html_document:
@@ -103,10 +103,10 @@ theme_update(
 )
 ```
 
-# Methodology 
+# Methodology
 
--   We started by taking a random subset of 60k keywords from Dataforseo´s 354M large US keyword database. The subset contained an equal set of keywords with monthly search volumes of 500-1000 , 1000-10000 and 10000-100000, respectively.
--   We used DataForSEO´s SERP API to populate the top 30 search results for each keyword across 4 search engines.
+-   We started by taking a random subset of 60k keywords from [DataforSEO´s](https://dataforseo.com/databases/keywords-database) 354M large US keyword database. The subset contained an equal set of keywords with monthly search volumes of 500-1000 , 1000-10000 and 10000-100000, respectively.
+-   We used [DataForSEO´s SERP API](https://dataforseo.com/apis/serp-api/) to populate the top 30 search results for each keyword across 4 search engines.
 -   We start from a dataset containing 7,606,414 observations, where one observation is a search result for a given search engine
 -   After we drop a handful of ill formatted keywords, filter to keep only organic results and remove observations featuring a missing keyword we are left with 7,154,169 observations
 -   After we join our data to our database of keywords we are left with 7,011,038 observations
