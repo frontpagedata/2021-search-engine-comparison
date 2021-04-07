@@ -131,7 +131,14 @@ We see below that on average 70% of top 10 results on yahoo can be also found in
 Google is very dissimilar to other search engines, especially Yahoo, its shares only 29% of top 10 results wit the latter. It is most similar to DuckDuckGo, with a similarity indicator of 31%.
 
 ```{r plot_ranking_similarity, echo=T, results=F}
-se_list <- c("Google", "Yahoo", "Bing", "DuckDuck") 
+se_list <- c("Google", "Yahoo", "Bing", "DuckDuckGo") 
+
+similarity_by_se_10 <- 
+  similarity_by_se_10 %>% 
+  mutate(
+    search_engine = if_else(search_engine == "DuckDuck", "DuckDuckGo", search_engine),
+    search_engine2 = if_else(search_engine2 == "DuckDuck", "DuckDuckGo", search_engine2)
+  )
 
 df <- 
   crossing(se_1 = se_list, se_2 = se_list) %>% 
@@ -141,11 +148,11 @@ df <-
             by = c("se_1" = "search_engine2", "se_2" = "search_engine")) %>% 
   mutate(
     similarity = coalesce(similarity.x, similarity.y),
-    se_1 = factor(se_1, levels = c("Yahoo", "Bing", "DuckDuck", "Google")),
-    se_2 = factor(se_2, levels = c("Yahoo", "Bing", "DuckDuck", "Google")),
+    se_1 = factor(se_1, levels = c("Yahoo", "Bing", "DuckDuckGo", "Google")),
+    se_2 = factor(se_2, levels = c("Yahoo", "Bing", "DuckDuckGo", "Google")),
     include_exclude = case_when(
       se_1 == se_2 ~ "exclude",
-      se_1 == "DuckDuck" & se_2 == "Bing" ~ "exclude",
+      se_1 == "DuckDuckGo" & se_2 == "Bing" ~ "exclude",
       TRUE ~ "include"
     ),
     label = ifelse(is.na(similarity), NA, glue::glue("{round(similarity * 100, 0)}%"))
@@ -158,8 +165,8 @@ p <-
   geom_tile(data = filter(df, include_exclude == "exclude"), fill = "#D3D2F9") +
   geom_text(data = filter(df, include_exclude == "include"), 
             aes(label = label), size = 7, family = "Poppins", fontface = "bold", color = "white") +
-  scale_x_discrete(limits = c("Yahoo", "Bing", "DuckDuck")) +
-  scale_y_discrete(limits = c("Google", "DuckDuck", "Bing")) +
+  scale_x_discrete(limits = c("Yahoo", "Bing", "DuckDuckGo")) +
+  scale_y_discrete(limits = c("Google", "DuckDuckGo", "Bing")) +
   scale_fill_gradient(low = "#C2C2FF", high = "#7426da", limits = c(0.2, 0.8), breaks = c(0.2, 0.5, 0.8), labels = scales::percent_format(accuracy = 1), name = "Similarity") +
   guides(fill = guide_colorsteps(title.position = "top", title.hjust = 0.5)) +
   labs(
@@ -191,7 +198,7 @@ We see overall that generally the higher the number of top results considered, t
 We see that many of google's results are not found by its competitors (and inversely), in particular on average about only 25% of Google's top 30 results are found in the top 30 of its competitors.
 
 ```{r plot_ranking_similarity_trend, echo=T, results=F}
-se_list <- c("Google", "Yahoo", "Bing", "DuckDuck") 
+se_list <- c("Google", "Yahoo", "Bing", "DuckDuckGo") 
 
 plot_similarity_between_se <- function(similarity_by_se, results = "Top 10") {
   df <- 
@@ -202,11 +209,11 @@ plot_similarity_between_se <- function(similarity_by_se, results = "Top 10") {
             by = c("se_1" = "search_engine2", "se_2" = "search_engine")) %>% 
   mutate(
     similarity = coalesce(similarity.x, similarity.y),
-    se_1 = factor(se_1, levels = c("Yahoo", "Bing", "DuckDuck", "Google")),
-    se_2 = factor(se_2, levels = c("Yahoo", "Bing", "DuckDuck", "Google")),
+    se_1 = factor(se_1, levels = c("Yahoo", "Bing", "DuckDuckGo", "Google")),
+    se_2 = factor(se_2, levels = c("Yahoo", "Bing", "DuckDuckGo", "Google")),
     include_exclude = case_when(
       se_1 == se_2 ~ "exclude",
-      se_1 == "DuckDuck" & se_2 == "Bing" ~ "exclude",
+      se_1 == "DuckDuckGo" & se_2 == "Bing" ~ "exclude",
       TRUE ~ "include"
     ),
     label = ifelse(is.na(similarity), NA, glue::glue("{round(similarity * 100, 0)}%"))
@@ -218,8 +225,8 @@ plot_similarity_between_se <- function(similarity_by_se, results = "Top 10") {
     geom_tile(data = filter(df, include_exclude == "exclude"), fill = "#D3D2F9") +
     geom_text(data = filter(df, include_exclude == "include"), 
               aes(label = label), size = 7, family = "Poppins", fontface = "bold", color = "white") +
-    scale_x_discrete(limits = c("Yahoo", "Bing", "DuckDuck")) +
-    scale_y_discrete(limits = c("Google", "DuckDuck", "Bing")) +
+    scale_x_discrete(limits = c("Yahoo", "Bing", "DuckDuckGo")) +
+    scale_y_discrete(limits = c("Google", "DuckDuckGo", "Bing")) +
     scale_fill_gradient(
       low = "#C2C2FF", high = "#7426da", limits = c(0.2, 0.8), breaks = c(0.2, 0.5, 0.8), 
       labels = scales::percent_format(accuracy = 1), name = "Similarity"
@@ -241,6 +248,34 @@ plot_similarity_between_se <- function(similarity_by_se, results = "Top 10") {
     )
 }
 
+similarity_by_se_3 <- 
+  similarity_by_se_3 %>% 
+  mutate(
+    search_engine = if_else(search_engine == "DuckDuck", "DuckDuckGo", search_engine),
+    search_engine2 = if_else(search_engine2 == "DuckDuck", "DuckDuckGo", search_engine2)
+  )
+
+similarity_by_se_10 <- 
+  similarity_by_se_10 %>% 
+  mutate(
+    search_engine = if_else(search_engine == "DuckDuck", "DuckDuckGo", search_engine),
+    search_engine2 = if_else(search_engine2 == "DuckDuck", "DuckDuckGo", search_engine2)
+  )
+
+similarity_by_se_20 <- 
+  similarity_by_se_20 %>% 
+  mutate(
+    search_engine = if_else(search_engine == "DuckDuck", "DuckDuckGo", search_engine),
+    search_engine2 = if_else(search_engine2 == "DuckDuck", "DuckDuckGo", search_engine2)
+  )
+
+similarity_by_se_30 <- 
+  similarity_by_se_30 %>% 
+  mutate(
+    search_engine = if_else(search_engine == "DuckDuck", "DuckDuckGo", search_engine),
+    search_engine2 = if_else(search_engine2 == "DuckDuck", "DuckDuckGo", search_engine2)
+  )
+  
 p1 <- plot_similarity_between_se(similarity_by_se_3, "Top 3 Results")
 p2 <- plot_similarity_between_se(similarity_by_se_10, "Top 10 Results")
 p3 <- plot_similarity_between_se(similarity_by_se_20, "Top 20 Results")
@@ -278,6 +313,7 @@ se_labels <-
   similarity_by_se_and_vol %>% 
   filter(monthly_search_volume_level == "10000-100000", grp == "top 10") %>% 
   mutate(
+    search_engine = if_else(search_engine == "DuckDuck", "DuckDuckGo", search_engine),
     monthly_search_volume_level = factor(monthly_search_volume_level, labels = "10k-1m"),
     
   )
@@ -285,6 +321,7 @@ se_labels <-
 p <- 
   similarity_by_se_and_vol %>% 
   mutate(
+    search_engine = if_else(search_engine == "DuckDuck", "DuckDuckGo", search_engine),
     monthly_search_volume_level = factor(monthly_search_volume_level, labels = c("0.5k-1k", "1k-10k", "10k-1m"))
   ) %>% 
   ggplot(aes(monthly_search_volume_level, y = similarity, colour = search_engine,
@@ -294,8 +331,8 @@ p <-
   ggrepel::geom_text_repel(data = se_labels, aes(label = search_engine), nudge_y = 0.0075, nudge_x = -0.35, size = 3, hjust = 0, fontface = "bold", family = "Poppins") +
   scale_y_continuous(limits = c(0.2, 0.35), breaks = seq(0.2, 0.35, 0.05), labels = scales::label_percent(accuracy = 1), expand = expansion(0)) +
   scale_x_discrete(expand = expansion(0.05)) +
-  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
-  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
   labs(title = "Similarity to Google by Keyword's Monthly Search Volume",
        x = "Monthly Search Volume",
        y = "Search Engine Similarity") +
@@ -382,12 +419,15 @@ For every category Yahoo is the most dissimilar to Google and DuckDuckGo the mos
 ```{r plot_google_similarity, echo=T, results=F}
 p <- 
   similarity_by_se_and_category %>%
+  mutate(
+    search_engine = if_else(search_engine == "DuckDuck", "DuckDuckGo", search_engine)
+  ) %>% 
   ggplot(aes(x = similarity, y = keyword_category,
              group = search_engine)) +
   geom_point(aes(fill = search_engine), shape = 21, size = 5, stroke = 1.1, color = "grey95") +
   scale_x_continuous(limits = c(0.2, 0.4), labels = scales::label_percent(accuracy = 1), expand = expansion(0), sec.axis = dup_axis(name = "")) +
-  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
-  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0"), limits = c("Yahoo", "Bing", "DuckDuck")) +
+  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0"), limits = c("Yahoo", "Bing", "DuckDuckGo")) +
   coord_cartesian(clip = "off") +
   guides(
     fill = guide_legend(
@@ -423,13 +463,16 @@ We reproduce this chart for the 10 biggest subcategories of level 2.
 ```{r plot_google_similarity_level_2, echo=T, results=F}
 p <- 
   similarity_by_se_and_category_2 %>%
+  mutate(
+    search_engine = if_else(search_engine == "DuckDuck", "DuckDuckGo", search_engine)
+  ) %>% 
   ggplot(aes(x = similarity, y = keyword_category,
              group = search_engine)) +
   geom_point(aes(fill = search_engine), shape = 21, size = 5, stroke = 1.1, color = "grey95") +
   scale_x_continuous(limits = c(0.2, 0.4), labels = scales::label_percent(accuracy = 1), expand = expansion(0), sec.axis = dup_axis(name = "")) +
   scale_y_discrete(expand = expansion(0.03)) +
-  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
-  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0"), limits = c("Yahoo", "Bing", "DuckDuck")) +
+  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0"), limits = c("Yahoo", "Bing", "DuckDuckGo")) +
   coord_cartesian(clip = "off") +
   guides(
     fill = guide_legend(
@@ -462,7 +505,7 @@ dev.off()
 
 Finally we offer a breakdown of the accuracy by main category and volume category.
 
-We see that volume can make a big difference in some cases, for instance for Health related keywords Bing and DuckDuck become much more accurate as volume increases.
+We see that volume can make a big difference in some cases, for instance for Health related keywords Bing and DuckDuckGo become much more accurate as volume increases.
 
 We see also that Real Estate related searches yield the rankings most similar to google compared to other categories at low and medium volume, but not at high volume.
 
@@ -470,14 +513,15 @@ We see also that Real Estate related searches yield the rankings most similar to
 p <- 
   similarity_by_se_category_and_vol %>%
   mutate(
-    monthly_search_volume_level = factor(monthly_search_volume_level, labels = c("0.5k-1k", "1k-10k", "10k-1m"))
+    monthly_search_volume_level = factor(monthly_search_volume_level, labels = c("0.5k-1k", "1k-10k", "10k-1m")),
+    search_engine = if_else(search_engine == "DuckDuck", "DuckDuckGo", search_engine)
   ) %>% 
   ggplot(aes(x = similarity, y = keyword_category,
              group = search_engine)) +
   geom_point(aes(fill = search_engine), shape = 21, size = 5, stroke = 1.1, color = "grey95") +
   scale_x_continuous(limits = c(0.2, 0.4), labels = scales::label_percent(accuracy = 1), expand = expansion(0)) +
-  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
-  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0"), limits = c("Yahoo", "Bing", "DuckDuck")) +
+  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0"), limits = c("Yahoo", "Bing", "DuckDuckGo")) +
   coord_cartesian(clip = "off") +
   facet_wrap(~ monthly_search_volume_level) +
   guides(
@@ -553,6 +597,12 @@ On average accuracy for length 1 we measure a similarity in the 28-30% range, wh
 It might be that long keywords are more precise, so the pool of potential targets decreases with the length of the search and long searches tend to converge over search engines too.
 
 ```{r plot_similarity_keyword_length, echo = T, results=F}
+similarity_by_se_and_kw_length  <- 
+  similarity_by_se_and_kw_length %>% 
+  mutate(
+    search_engine = if_else(search_engine == "DuckDuck", "DuckDuckGo", search_engine)
+  )
+
 p <- 
   similarity_by_se_and_kw_length %>%
   ggplot(aes(keyword_length, y = similarity, colour = search_engine, group = search_engine)) +
@@ -562,8 +612,8 @@ p <-
                            aes(label = search_engine), size = 3, hjust = 0, nudge_y = 0.005, fontface = "bold", family = "Poppins") +
   scale_y_continuous(limits = c(0.25, 0.40), breaks = seq(0.25, 0.40, 0.05), labels = scales::label_percent(accuracy = 1), expand = expansion(0)) +
   scale_x_discrete(expand = expansion(0.01)) +
-  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
-  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
   labs(title = "Search Engine Similarity to Google by Keyword Length",
        subtitle = "Based on Top 10 rankings",
        colour = "Search Engine", 
@@ -585,10 +635,16 @@ dev.off()
 Breaking it down by volume level, we observe the same tendency but with a stronger trend for smaller volume (generally smaller minima and higher maxima). It might be that for low volume searches, a high number of terms make the search very precise and given that the pool of results is restricted the rankings will tend to converge, while a short search for low volume keywords is not precise enough to converge over search engines.
 
 ```{r plot_similarity_vol_keyword_length, echo = T, results = F}
+similarity_by_se_vol_and_kw_length <- 
+  similarity_by_se_vol_and_kw_length %>% 
+  mutate(
+    search_engine = if_else(search_engine == "DuckDuck", "DuckDuckGo", search_engine)
+  )
+
 se_labels <- 
   similarity_by_se_vol_and_kw_length %>%
   mutate(
-    monthly_search_volume_level = factor(monthly_search_volume_level, labels = c("0.5k-1k", "1k-10k", "10k-1m"))
+    monthly_search_volume_level = factor(monthly_search_volume_level, labels = c("0.5k-1k", "1k-10k", "10k-1m")),
   ) %>% 
   filter(monthly_search_volume_level == "0.5k-1k", keyword_length == "5+")
 
@@ -606,8 +662,8 @@ p <-
   ) +
   scale_y_continuous(limits = c(0.25, 0.4), breaks = seq(0.25, 0.4, 0.05), labels = scales::label_percent(accuracy = 1), expand = expansion(0)) +
   scale_x_discrete(expand = expansion(0.01)) +
-  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
-  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
   labs(title = "Search Engine similarity to Google by Keyword Length",
        subtitle = "Top 10 - breakdown by volume level",
        colour = "Search Engine", 
@@ -649,11 +705,19 @@ We see that search engines vary sensibly in which domain they put on top.
 -   IMDB is much less featured by Google than by competitors
 
 ```{r plot_top_domains_top_result, echo = T, results = F}
+top_domains <- 
+  top_domains %>%
+  mutate(
+    search_engine = fct_recode(search_engine, DuckDuckGo = "DuckDuck")
+  )
+
 compare_to_google <- 
   top_domains %>%
   group_by(domain) %>% 
   arrange(domain, search_engine) %>% 
-  mutate(google_pct = if_else(search_engine == "Google", pct, NA_real_)) %>% 
+  mutate(
+    google_pct = if_else(search_engine == "Google", pct, NA_real_)
+  ) %>% 
   fill(google_pct, .direction = "down") %>% 
   ungroup() %>% 
   filter(search_engine != "Google")
@@ -682,8 +746,8 @@ p <-
   ) +
   facet_wrap(~domain, ncol = 2, strip.position = "top", scales = "free_x") +
   scale_x_continuous(limits = c(0, 0.1), breaks = seq(0, 0.1, 0.025), labels = scales::label_percent(accuracy = 0.1), expand = expansion(0)) +
-  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0"), limits = c("Yahoo", "Bing", "DuckDuck")) +
-  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0"), limits = c("Yahoo", "Bing", "DuckDuckGo")) +
+  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
   coord_cartesian(clip = "off") +
     guides(
     fill = guide_legend(
@@ -719,6 +783,12 @@ We reproduce the analysis considering the whole top 10 results rather than only 
 -   Pinterest and facebook are twice more featured by Google
 
 ```{r plot_top_domains_top_10_result, echo = T, results = F}
+top_domains_10 <- 
+  top_domains_10 %>%
+  mutate(
+    search_engine = fct_recode(search_engine, DuckDuckGo = "DuckDuck")
+  )
+
 compare_to_google <- 
   top_domains_10 %>%
   group_by(domain) %>% 
@@ -752,8 +822,8 @@ p <-
   ) +
   facet_wrap(~domain, ncol = 2, strip.position = "top", scales = "free_x") +
   scale_x_continuous(limits = c(0, 0.05), breaks = seq(0, 0.05, 0.01), labels = scales::label_percent(accuracy = 0.1), expand = expansion(0)) +
-  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0"), limits = c("Yahoo", "Bing", "DuckDuck")) +
-  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0"), limits = c("Yahoo", "Bing", "DuckDuckGo")) +
+  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
   coord_cartesian(clip = "off") +
     guides(
     fill = guide_legend(
@@ -786,6 +856,12 @@ dev.off()
 Find below the top domains considering top 3, top 20 and top 30
 
 ```{r plot_top_domains_top_03_result, echo = T, results = F}
+top_domains_3 <- 
+  top_domains_3 %>%
+  mutate(
+    search_engine = fct_recode(search_engine, DuckDuckGo = "DuckDuck")
+  )
+
 compare_to_google <- 
   top_domains_3 %>%
   group_by(domain) %>% 
@@ -819,8 +895,8 @@ p <-
   ) +
   facet_wrap(~domain, ncol = 2, strip.position = "top", scales = "free_x") +
   scale_x_continuous(limits = c(0, 0.08), breaks = seq(0, 0.08, 0.02), labels = scales::label_percent(accuracy = 0.1), expand = expansion(0)) +
-  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0"), limits = c("Yahoo", "Bing", "DuckDuck")) +
-  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0"), limits = c("Yahoo", "Bing", "DuckDuckGo")) +
+  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
   coord_cartesian(clip = "off") +
     guides(
     fill = guide_legend(
@@ -851,6 +927,12 @@ dev.off()
 ![](../plots/plot_14_plot_top_domains_top_03_results.png)
 
 ```{r plot_top_domains_top_20_result, echo = T, results = F}
+top_domains_20 <- 
+  top_domains_20 %>%
+  mutate(
+    search_engine = fct_recode(search_engine, DuckDuckGo = "DuckDuck")
+  )
+
 compare_to_google <- 
   top_domains_20 %>%
   filter(domain != "missing_domain") %>% 
@@ -885,8 +967,8 @@ p <-
   ) +
   facet_wrap(~domain, ncol = 3, strip.position = "top", scales = "free_x") +
   scale_x_continuous(limits = c(0, 0.05), breaks = seq(0, 0.05, 0.01), labels = scales::label_percent(accuracy = 0.1), expand = expansion(0)) +
-  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0"), limits = c("Yahoo", "Bing", "DuckDuck")) +
-  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0"), limits = c("Yahoo", "Bing", "DuckDuckGo")) +
+  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
   coord_cartesian(clip = "off") +
     guides(
     fill = guide_legend(
@@ -917,6 +999,12 @@ dev.off()
 ![](../plots/plot_15_plot_top_domains_top_20_results.png)
 
 ```{r plot_top_domains_top_30_result, echo = T, results = F}
+top_domains_30 <- 
+  top_domains_30 %>%
+  mutate(
+    search_engine = fct_recode(search_engine, DuckDuckGo = "DuckDuck")
+  )
+
 compare_to_google <- 
   top_domains_30 %>%
   filter(domain != "missing_domain") %>% 
@@ -951,8 +1039,8 @@ p <-
   ) +
   facet_wrap(~domain, ncol = 3, strip.position = "top", scales = "free_x") +
   scale_x_continuous(limits = c(0, 0.05), breaks = seq(0, 0.05, 0.01), labels = scales::label_percent(accuracy = 0.1), expand = expansion(0)) +
-  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0"), limits = c("Yahoo", "Bing", "DuckDuck")) +
-  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0"), limits = c("Yahoo", "Bing", "DuckDuckGo")) +
+  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
   coord_cartesian(clip = "off") +
     guides(
     fill = guide_legend(
@@ -1088,6 +1176,12 @@ dev.off()
 ![](../plots/plot_17_plot_domain_specificity.png){height="75%," width="75%"}
 
 ```{r plot_se_similarity_domain_specificity, echo = T, results = F}
+similarity_by_se_and_spec <- 
+  similarity_by_se_and_spec %>% 
+  mutate(
+    search_engine = if_else(search_engine == "DuckDuck", "DuckDuckGo", search_engine)
+  )
+
 p <- 
   similarity_by_se_and_spec %>%
   ggplot(aes(domain_specificity_grouped, y = similarity, colour = search_engine,
@@ -1100,8 +1194,8 @@ p <-
   ) +
   scale_y_continuous(limits = c(0.20, 0.40), breaks = seq(0.20, 0.40, 0.05), labels = scales::label_percent(accuracy = 1), expand = expansion(0)) +
   scale_x_discrete(expand = expansion(0.01)) +
-  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
-  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuck" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
+  scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
   labs(title = "Search Engine Similarity to Google by Domain Specificity",
        subtitle = "Based on Top 10 rankings",
        colour = "Search Engine", 
@@ -1133,6 +1227,12 @@ The second most likely position is that it's not found at all in the top 30.
 A fair amount of google first results are not found at all by other search engines, at least not in the top 30, so we cannot compute a mean position, but we see that for every other search engine, we find google's top results in the top 3 more than half of the time.
 
 ```{r plot_search_position, echo = T, results = F}
+google1_positions <- 
+  google1_positions %>% 
+  mutate(
+    search_engine = if_else(search_engine == "DuckDuck", "DuckDuckGo", search_engine)
+  )
+
 search_position_df <- 
   google1_positions %>% 
   group_by(search_engine) %>% 
@@ -1152,7 +1252,7 @@ search_position_df <-
   mutate(
     alpha = if_else(name == "pct", 1, 0.15),
     name = if_else(name == "pct", as.character(glue::glue("{search_engine}_{name}")), name),
-    search_engine = factor(search_engine, levels = c("Yahoo", "Bing", "DuckDuck"), labels = c("<span style='color:#247ba0'>**Yahoo**</span>", "<span style='color:#f25f5c'>Bing</style>", "<span style='color:#70c1b3'>DuckDuck</span>"))
+    search_engine = factor(search_engine, levels = c("Yahoo", "Bing", "DuckDuckGo"), labels = c("<span style='color:#247ba0'>**Yahoo**</span>", "<span style='color:#f25f5c'>Bing</style>", "<span style='color:#70c1b3'>DuckDuckGo</span>"))
   )
 
 p <- 
@@ -1167,8 +1267,8 @@ p <-
     aes(x = 0, y = 0, label = pct_text, color = name), family = "Poppins", size = 6, fontface = "bold"
   ) +
   scale_alpha_identity() +
-  scale_fill_manual(values = c("Bing_pct" = "#f25f5c", "DuckDuck_pct" = "#70c1b3", "Yahoo_pct" =  "#247ba0", "pct_remainder" = "grey70")) +
-  scale_color_manual(values = c("Bing_pct" = "#f25f5c", "DuckDuck_pct" = "#70c1b3", "Yahoo_pct" =  "#247ba0", "pct_remainder" = "grey70")) +
+  scale_fill_manual(values = c("Bing_pct" = "#f25f5c", "DuckDuckGo_pct" = "#70c1b3", "Yahoo_pct" =  "#247ba0", "pct_remainder" = "grey70")) +
+  scale_color_manual(values = c("Bing_pct" = "#f25f5c", "DuckDuckGo_pct" = "#70c1b3", "Yahoo_pct" =  "#247ba0", "pct_remainder" = "grey70")) +
   coord_cartesian(clip = "off") +
   facet_grid(search_engine~google1_position, switch = "y") +
   labs(
