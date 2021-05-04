@@ -1,4 +1,4 @@
-# Google Search Comparison StudyUser Behaviour Study
+# Google Search Comparison Study
 
 This is the Github repository the Google Search Comparison Study.
 
