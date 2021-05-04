@@ -416,7 +416,10 @@ The following chart shows that there is significant variance in similarity depen
 
 For every category Yahoo is the most dissimilar to Google and DuckDuckGo the most similar, and the difference in similarity between those goes up to about 3.5 % for some categories such as Health and Apparel.
 
-```{r plot_google_similarity, echo=T, results=F}
+```{r plot_google_similarity, echo=T, results=T}
+print(similarity_by_se_and_category, n = Inf)
+
+
 p <- 
   similarity_by_se_and_category %>%
   mutate(
@@ -460,7 +463,9 @@ dev.off()
 
 We reproduce this chart for the 10 biggest subcategories of level 2.
 
-```{r plot_google_similarity_level_2, echo=T, results=F}
+```{r plot_google_similarity_level_2, echo=T, results=T}
+print(similarity_by_se_and_category_2, n = Inf)
+
 p <- 
   similarity_by_se_and_category_2 %>%
   mutate(
@@ -509,7 +514,10 @@ We see that volume can make a big difference in some cases, for instance for Hea
 
 We see also that Real Estate related searches yield the rankings most similar to google compared to other categories at low and medium volume, but not at high volume.
 
-```{r plot_google_similarity_by_vol, echo=T, results=F}
+```{r plot_google_similarity_by_vol, echo=T, results=T}
+print(similarity_by_se_category_and_vol, n = Inf)
+
+
 p <- 
   similarity_by_se_category_and_vol %>%
   mutate(
@@ -596,12 +604,14 @@ On average accuracy for length 1 we measure a similarity in the 28-30% range, wh
 
 It might be that long keywords are more precise, so the pool of potential targets decreases with the length of the search and long searches tend to converge over search engines too.
 
-```{r plot_similarity_keyword_length, echo = T, results=F}
+```{r plot_similarity_keyword_length, echo = T, results = T}
 similarity_by_se_and_kw_length  <- 
   similarity_by_se_and_kw_length %>% 
   mutate(
     search_engine = if_else(search_engine == "DuckDuck", "DuckDuckGo", search_engine)
   )
+
+print(similarity_by_se_and_kw_length, n = Inf)
 
 p <- 
   similarity_by_se_and_kw_length %>%
@@ -634,12 +644,14 @@ dev.off()
 
 Breaking it down by volume level, we observe the same tendency but with a stronger trend for smaller volume (generally smaller minima and higher maxima). It might be that for low volume searches, a high number of terms make the search very precise and given that the pool of results is restricted the rankings will tend to converge, while a short search for low volume keywords is not precise enough to converge over search engines.
 
-```{r plot_similarity_vol_keyword_length, echo = T, results = F}
+```{r plot_similarity_vol_keyword_length, echo = T, results = T}
 similarity_by_se_vol_and_kw_length <- 
   similarity_by_se_vol_and_kw_length %>% 
   mutate(
     search_engine = if_else(search_engine == "DuckDuck", "DuckDuckGo", search_engine)
   )
+
+print(similarity_by_se_vol_and_kw_length, n = Inf)
 
 se_labels <- 
   similarity_by_se_vol_and_kw_length %>%
@@ -704,12 +716,14 @@ We see that search engines vary sensibly in which domain they put on top.
 -   Amazon is less featured by Google than by its competitors.
 -   IMDB is much less featured by Google than by competitors
 
-```{r plot_top_domains_top_result, echo = T, results = F}
+```{r plot_top_domains_top_result, echo = T, results = T}
 top_domains <- 
   top_domains %>%
   mutate(
     search_engine = fct_recode(search_engine, DuckDuckGo = "DuckDuck")
   )
+
+print(top_domains, n = Inf)
 
 compare_to_google <- 
   top_domains %>%
@@ -782,12 +796,14 @@ We reproduce the analysis considering the whole top 10 results rather than only 
 -   We lose the wikipedia bias for Google when we look at the full top 10
 -   Pinterest and facebook are twice more featured by Google
 
-```{r plot_top_domains_top_10_result, echo = T, results = F}
+```{r plot_top_domains_top_10_result, echo = T, results = T}
 top_domains_10 <- 
   top_domains_10 %>%
   mutate(
     search_engine = fct_recode(search_engine, DuckDuckGo = "DuckDuck")
   )
+
+print(top_domains_10, n = Inf)
 
 compare_to_google <- 
   top_domains_10 %>%
@@ -797,6 +813,8 @@ compare_to_google <-
   fill(google_pct, .direction = "down") %>% 
   ungroup() %>% 
   filter(search_engine != "Google")
+
+print(compare_to_google, n = Inf)
 
 p <- 
   ggplot() +
@@ -855,12 +873,14 @@ dev.off()
 
 Find below the top domains considering top 3, top 20 and top 30
 
-```{r plot_top_domains_top_03_result, echo = T, results = F}
+```{r plot_top_domains_top_03_result, echo = T, results = T}
 top_domains_3 <- 
   top_domains_3 %>%
   mutate(
     search_engine = fct_recode(search_engine, DuckDuckGo = "DuckDuck")
   )
+
+print(top_domains_3, n = Inf)
 
 compare_to_google <- 
   top_domains_3 %>%
@@ -870,6 +890,8 @@ compare_to_google <-
   fill(google_pct, .direction = "down") %>% 
   ungroup() %>% 
   filter(search_engine != "Google")
+
+print(compare_to_google, n = Inf)
 
 p <- 
   ggplot() +
@@ -926,12 +948,14 @@ dev.off()
 
 ![](../plots/plot_14_plot_top_domains_top_03_results.png)
 
-```{r plot_top_domains_top_20_result, echo = T, results = F}
+```{r plot_top_domains_top_20_result, echo = T, results = T}
 top_domains_20 <- 
   top_domains_20 %>%
   mutate(
     search_engine = fct_recode(search_engine, DuckDuckGo = "DuckDuck")
   )
+
+print(top_domains_20, n = Inf)
 
 compare_to_google <- 
   top_domains_20 %>%
@@ -942,6 +966,8 @@ compare_to_google <-
   fill(google_pct, .direction = "down") %>% 
   ungroup() %>% 
   filter(search_engine != "Google")
+
+print(compare_to_google, n = Inf)
 
 p <- 
   ggplot() +
@@ -998,12 +1024,14 @@ dev.off()
 
 ![](../plots/plot_15_plot_top_domains_top_20_results.png)
 
-```{r plot_top_domains_top_30_result, echo = T, results = F}
+```{r plot_top_domains_top_30_result, echo = T, results = T}
 top_domains_30 <- 
   top_domains_30 %>%
   mutate(
     search_engine = fct_recode(search_engine, DuckDuckGo = "DuckDuck")
   )
+
+print(top_domains_30, n = Inf)
 
 compare_to_google <- 
   top_domains_30 %>%
@@ -1014,6 +1042,8 @@ compare_to_google <-
   fill(google_pct, .direction = "down") %>% 
   ungroup() %>% 
   filter(search_engine != "Google")
+
+print(compare_to_google, n = Inf)
 
 p <- 
   ggplot() +
