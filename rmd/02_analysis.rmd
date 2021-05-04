@@ -1,6 +1,6 @@
 ---
-title: "Search Engine Comparison Study: Results From 6.5M SERP Results"
-date: "Last update: `r Sys.Date()`"
+title: "Results May Vary: Google vs. Yahoo, Bing and DuckDuckGo"
+subtitle: "6.5 million search results across 4 search engines reveal how they’re alike—and how they’re not"
 output:
   html_document:
     theme: paper
@@ -16,7 +16,7 @@ output:
 ```{=html}
 <style>
 .list-group-item.active, .list-group-item.active:hover, .list-group-item.active:focus {
-  background-color: #00d188;
+  background-color: #D3D2FA;
   border-color: #00d188;
 }
 
@@ -33,7 +33,7 @@ h1 {
 
 h1.title {
   font-size: 30px;
-  color: #00d188;
+  color: #9795f0;
 }
 
 h2 {
