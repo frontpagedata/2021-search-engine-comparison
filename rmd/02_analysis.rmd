@@ -170,7 +170,7 @@ p <-
   scale_fill_gradient(low = "#C2C2FF", high = "#7426da", limits = c(0.2, 0.8), breaks = c(0.2, 0.5, 0.8), labels = scales::percent_format(accuracy = 1), name = "Similarity") +
   guides(fill = guide_colorsteps(title.position = "top", title.hjust = 0.5)) +
   labs(
-    title = "Similarity between Top 10 results of search engine pairs",
+    title = "Yahoo, Bing and DuckDuckGo give very different results",
     x = "",
     y = ""
   ) +
@@ -333,7 +333,8 @@ p <-
   scale_x_discrete(expand = expansion(0.05)) +
   scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
   scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
-  labs(title = "Similarity to Google by Keyword's Monthly Search Volume",
+  labs(title = "Obscure and popular keywords will get you the most variety by using multiple search engines
+",
        x = "Monthly Search Volume",
        y = "Search Engine Similarity") +
   facet_wrap(~grp, ncol = 3, labeller = labeller(grp = str_to_title)) +
@@ -441,7 +442,7 @@ p <-
     )
   ) +
   labs(
-    title = "Search Engine similarity to Google by Keyword Category",
+    title = "Topic makes a huge difference in how similar search results are",
     subtitle = "Based on Top 10 rankings",
     colour = "Search Engine", 
     x = "Search Engine Similarity",
@@ -624,7 +625,7 @@ p <-
   scale_x_discrete(expand = expansion(0.01)) +
   scale_color_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
   scale_fill_manual(values = c("Bing" = "#f25f5c", "DuckDuckGo" = "#70c1b3", "Yahoo" =  "#247ba0")) +
-  labs(title = "Search Engine Similarity to Google by Keyword Length",
+  labs(title = "Searching long-tail keywords? Stick to your search engine of choice",
        subtitle = "Based on Top 10 rankings",
        colour = "Search Engine", 
        x = "Keyword Length in Words",
@@ -752,7 +753,7 @@ p <-
   geom_text(data = filter(top_domains, search_engine == "Google", domain == "en.wikipedia.org"),
             aes(x = pct, y = 1, label = "Google"), nudge_x = 0.001, hjust = 0, vjust = 1, angle = -270, fontface = "bold", family = "Poppins", size = 5, color = "#574c99", alpha = 0.8) +
   labs(
-    title = "Prevalence of big domains in searches",
+    title = "Every search engine has its favorite “big domains",
     subtitle = "Based on Top Result",
     x = "Share of presence in top spot",
     y = "",
@@ -1302,7 +1303,7 @@ p <-
   coord_cartesian(clip = "off") +
   facet_grid(search_engine~google1_position, switch = "y") +
   labs(
-    title = str_wrap("Distribution of position of Top Google result among rankings of other search engines", width = 60),
+    title = str_wrap("Google’s top result does well on other search engines most of the time", width = 40),
     x = "",
     y = ""
   ) +
